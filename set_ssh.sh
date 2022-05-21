@@ -2,7 +2,7 @@
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
-# set the next value to block ssh access (true) or allow ssh access (false)
+# set the next value to disable ssh access (true) or enable ssh access (false)
 ssh_lock=false
 
 # request bearer TOKEN
