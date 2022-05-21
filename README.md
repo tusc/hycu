@@ -1,4 +1,4 @@
-# HYCU REST api example scripts
+# HYCU REST Api example scripts
 ## Project Notes
 
 **Author:** Carlos Talbot
