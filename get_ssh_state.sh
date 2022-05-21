@@ -9,5 +9,5 @@ token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $
 # convert TOKEN to base64
 btoken=$(echo -n $token | base64)
 
-# a return of FALSE denotes SSH lock is not enabled, TRUE denotes a lock
+# a return of FALSE means SSH is enabled, TRUE mean SSH is disabled
 curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/ssh/lock?pageSize=100" | jq -r ".entities[].sshLocked"
