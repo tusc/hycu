@@ -11,9 +11,6 @@ token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $
 # convert TOKEN to base64
 btoken=$(echo -n $token | base64)
 
-#curl -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/ssh/lock?pageSize=100" | jq .sshLocked
-
-
 curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" -d "{
   \"sshLocked\": $ssh_lock
 }" "https://$hycuctlr:8443/rest/v1.0/ssh/lock" | jq
