@@ -9,4 +9,4 @@ token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $
 # convert TOKEN to base64
 btoken=$(echo -n $token | base64)
 
-curl -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/users?pageSize=100"  | jq
+curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/users?pageSize=100"  | jq
