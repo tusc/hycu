@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+#Sample script to list all users accounts
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
