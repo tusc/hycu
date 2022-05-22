@@ -1,4 +1,7 @@
 #!/usr/bin/bash
+#This script will enable or disable SSH access to the HYCU conrtroller. It is advised to run this remotely from another system since it will
+#impact your SSH session on the controller.
+
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
