@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+#This script pauses the cleanup of targets and, if enabled, the purge of events and jobs.
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
