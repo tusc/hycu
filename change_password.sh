@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+# This script will update the password for a given user. Administrator role is required for the selected admin account.
 hycuctlr="192.168.1.80"
 # admin account that will be updating record
 adminuser="admin"
