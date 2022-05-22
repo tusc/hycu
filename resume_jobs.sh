@@ -10,5 +10,4 @@ token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $
 # convert TOKEN to base64
 btoken=$(echo -n $token | base64)
 
-curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authoriza
-on: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/administration/scheduler/start" | jq
+curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorizaon: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/administration/scheduler/start" | jq
