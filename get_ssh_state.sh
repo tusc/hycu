@@ -1,4 +1,6 @@
 #!/usr/bin/bash
+#This script will check the state of SSH access on the HYCU controller.
+
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
