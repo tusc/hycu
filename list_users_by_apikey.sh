@@ -4,6 +4,6 @@
 
 hycuctlr="192.168.1.80"
 
-APIkey="bW12czh0ZjZjZjM5NnFjN2ZiNHRvdDgwaHZwaQ=="
+APIkey="XXXXXXXXXXXXXXXXXXXXXXX="
 
 curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $APIkey" "https://$hycuctlr:8443/rest/v1.0/users?pageSize=100"  | jq
