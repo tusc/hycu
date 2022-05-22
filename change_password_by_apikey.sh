@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 # This script will update the password for a given user using an API key generated from the UI.
 # User logged into the UI needs Administrator role
+
 hycuctlr="192.168.1.80"
 
 APIKey="XXXXXXXXXXXXXXXXXXXXXX="
