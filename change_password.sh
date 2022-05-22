@@ -22,7 +22,7 @@ uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure -
 user_record=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/users/$uuid"  | jq ".entities[]"`
 
 # append the password fields to end of user record
-newrecord=`echo $user_record |  jq '. += {"password":"'$newpass'", "oldpassword":"'$origpass'"}'`
+new_record=`echo $user_record |  jq '. += {"password":"'$newpass'", "oldpassword":"'$origpass'"}'`
 
 # update user record with new password
-curl -s -X PATCH --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/users/$uuid" -d "$newrecord" | jq
+curl -s -X PATCH --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/users/$uuid" -d "$new_record" | jq
