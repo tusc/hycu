@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-#This script is an example where you do not need a username and password to authenticate. It uses an API key that you generate from the UI.
+#This script is an example where you do not need a username and password to authenticate. It uses an API key that you generate from the HYCU UI.
 #This script will not work unless you generate a key and save it in the script.
 
 hycuctlr="192.168.1.80"
