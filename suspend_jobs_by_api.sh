@@ -5,7 +5,7 @@ hycuctlr="192.168.1.80"
 
 # You need to generate an API key from the UI in order to use this bearer token
 # User needs Administrator role
-APIKey="bW12czh0ZjZjZjM5NnFjN2ZiNHRvdDgwaHZwaQ=="
+APIKey="XXXXXXXXXXXXXXXXXX="
 
 # This variable determines how long to pause activities
 # This must be in one of the following formats:
