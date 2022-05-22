@@ -1,4 +1,7 @@
 #!/usr/bin/bash
+#This script will check if the HYCU controller is in a suspended state.
+#The three options that will return include: SUSPEND, SUSPEND_CLEANUP, and RESUME
+
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
