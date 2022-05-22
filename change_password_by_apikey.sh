@@ -1,8 +1,8 @@
 #!/usr/bin/bash
+# This script will update the password for a given user using an API key generated from the UI.
+# User logged into the UI needs Administrator role
 hycuctlr="192.168.1.80"
 
-# You need to generate an API key from the UI in order to use this bearer token
-# User needs Administrator role
 APIKey="XXXXXXXXXXXXXXXXXXXXXX="
 
 # user account you want to change password
