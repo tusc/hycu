@@ -3,7 +3,7 @@ hycuctlr="192.168.1.80"
 
 # You need to generate an API key from the UI in order to use this bearer token
 # User needs Administrator role
-APIKey="bW12czh0ZjZjZjM5NnFjN2ZiNHRvdDgwaHZwaQ=="
+APIKey="XXXXXXXXXXXXXXXXXXXXXX="
 
 # user account you want to change password
 changeuser="testuser"
