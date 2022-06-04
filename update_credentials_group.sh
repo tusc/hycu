@@ -21,7 +21,7 @@ then
 	echo "Credential name ($cred_name) and credential username ($cred_username) not found"
 	exit 1
 else
-	# extra the uuid field
+	# extract the uuid field
 	cred_uuid=`echo $cred_record | jq -r .uuid`
 	# extract just the necessary fields for for the REST PATCH call to change password
 	cred_record=`echo $cred_record | jq "{name, username, password, sshAuthenticationType, protocol, sshPrivateKey, sshPrivateKeyPassphrase, port, winrmTransport}" `
