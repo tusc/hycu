@@ -9,7 +9,7 @@ username="admin"
 pass="newadmin"
 
 # set this to the new password for the creditional group
-newpass="u*ye4#s"
+newpass="newscret"
 
 
 credgrp_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Basic $(echo -n $username:$pass | base64)" "https://$hycuctlr:8443/rest/v1.0/credentialgroups?pageSize=100"  | jq -r ".entities[].uuid"`
