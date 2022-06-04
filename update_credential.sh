@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 # This script will update the credentials password for a given username
-# You must make sure credentials name and username are properly filed in order to update record.
+# You must make sure credentials name and username are properly filled in order to update record.
 hycuctlr="192.168.1.80"
 username="admin"
 pass="newadmin"
