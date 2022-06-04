@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 # This script will run through all the credential groups and assign them a password as defined by the variable newpass
-# This example can be used to modify the script to synchronize with 3rd party password vauls (e.g. CyberArk)
+# This example can be used to modify the script to synchronize with 3rd party password vaults (e.g. CyberArk)
 #
 # You need to uncomment the last line in order to commit changes to the password field
 
@@ -28,8 +28,7 @@ do
         # modify password field in record
         new_record=`echo $cred_record |  jq '. += {"password":"'$newpass'"}'`
 
-        # UNCOMMENT the line below to allow changes to the user fields
-        # append the password field to end of user record
+        # UNCOMMENT the line below to allow changes to the credentials group
 #       curl -s -X PATCH --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Basic $(echo -n $username:$pass | base64)" "https://$hycuctlr:8443/rest/v1.0/credentialgroups/$cred_uuid" -d "$new_record" | jq
 
 done
