@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# This script will run through all the VMs in a policy and perform a clone of the VMs.
+# This script will run through all the VMs in a policy and perform a clone or overwrite the original.
 # This can be changed to restore the VMs back to the source location.
 #
 
