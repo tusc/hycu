@@ -8,6 +8,11 @@ username="admin"
 pass="newadmin"
 policy_name="Bronze"
 
+#####
+# Set the following variable to either CLONE or OVERWRITE which determines how the VMs are restored
+restore_mode=CLONE
+#restore_mode=OVERWRITE
+
 # request bearer TOKEN
 token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $username:$pass | base64)" "https://$hycuctlr:8443/rest/v1.0/requestToken" | jq -r '.token'`
 
@@ -48,10 +53,16 @@ do
         backup_time=`date -d @$((($backup_created + 500)/1000))`
         echo -e "Using $backup_type\t\tFROM $backup_target\tusing restore point $backup_time"
 
-        clone_name="$vm_name""_`date +%s`"
-        echo "new machine name will be $clone_name"
+        if [[ $RESTORE_MODE == "CLONE" ]]; then
+                clone_name="$vm_name""_`date +%s`"
+                echo "restore name will be $clone_name"
 
-        restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
+                restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
+        else
+                echo "restore name will be $vm_name"
+
+                restore_rec='{  "vmName": "'$vm_name'", "create_Vm": true, "deleteOriginalVm": true, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
+        fi
 
 
         # submit restore request
