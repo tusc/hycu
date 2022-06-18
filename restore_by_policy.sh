@@ -59,6 +59,8 @@ do
 
                 restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
         else
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!"
+                echo "OVERWRITING ORIGINAL VM!
                 echo "restore name will be $vm_name"
 
                 restore_rec='{  "vmName": "'$vm_name'", "create_Vm": true, "deleteOriginalVm": true, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
