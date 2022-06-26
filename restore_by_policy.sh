@@ -10,8 +10,8 @@ policy_name="Bronze"
 
 ################################
 # Set the following variable to either CLONE or OVERWRITE which determines how the VMs are restored
-#RESTORE_MODE=CLONE
-RESTORE_MODE=OVERWRITE
+RESTORE_MODE=CLONE
+#RESTORE_MODE=OVERWRITE
 #################################
 
 
