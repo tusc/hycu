@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# This script will run through all the VMs in a policy and perform a restore by cloning or overwriting the original.
+# This script will run through all the VMs in a policy and perform a restore by cloning or overwriting the original VM.
 # The only variable that needs to be configured is RESTORE_MODE
 #
 
