@@ -8,9 +8,12 @@ pass="newadmin"
 policy_name="Bronze"
 
 ################################
-# Set the following variable to either CLONE or OVERWRITE which determines how the VMs are restored
+# Set the variable RESTORE_MODE to either CLONE or OVERWRITE which determines how the VMs are restored
+# Uncomment RESTORE_DS if you want to restore to datastore other than the original location
+# If left uncommented, VM will be restored to original datastore
 #RESTORE_MODE=CLONE
 RESTORE_MODE=OVERWRITE
+#RESTORE_DS="VM_DS1"
 #################################
 
 
@@ -23,13 +26,13 @@ btoken=$(echo -n $token | base64)
 # retrive the policy UUID for the given name
 policy_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/policies"  | jq -r ".entities[] | select (.name==\"$policy_name\") | .uuid"`
 
-if [ -z "$policy_uuid" ]
-then
+if [ -z "$policy_uuid" ]; then
         echo "Policy ($policy_name) not found"
         exit 1
 fi
 
 echo "Policy $policy_name has a UUID of $policy_uuid"
+
 
 # Retrieve list of VMs in policy by UUID
 vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$policy_uuid\") | .uuid"`
@@ -56,11 +59,29 @@ do
         backup_time=`date -d @$((($backup_created + 500)/1000))`
         echo -e "Using $backup_type\t\tFROM $backup_target\tusing restore point $backup_time"
 
+        ds_uuid=null
+        # Restore to different datastore
+        if [ ! -z "$RESTORE_DS" ]; then
+                ds_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/$vm_uuid/restoreLocations?backupUuid=$backup_uuid"  | jq -r ".entities[] |  select (.name | contains(\"$RESTORE_DS\")) | .externalId"`
+                if [ -z "$ds_uuid" ]; then
+                        echo "Datastore ($RESTORE_DS) not found"
+                        exit 1
+                fi
+                echo "Restoring to alternative datastore $RESTORE_DS ($ds_uuid)"
+        else
+                echo "Restoring to original datastore"
+        fi
+
         if [[ $RESTORE_MODE == "CLONE" ]]; then
                 clone_name="$vm_name""_`date +%s`"
                 echo "Will clone vm with new name $clone_name"
 
-                restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "backupUuid": "'$backup_uuid'"  }'
+                if [ ! -z "$RESTORE_DS" ]; then
+                        restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "containerId": "'$ds_uuid'", "backupUuid": "'$backup_uuid'"  }'
+                else
+                        restore_rec='{  "vmName": "'$clone_name'", "create_Vm": true, "deleteOriginalVm": false, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": false, "containerId": null, "backupUuid": "'$backup_uuid'"  }'
+                fi
+
         else    # Overwritting the oringal VM
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!"
                 echo "OVERWRITING ORIGINAL VM!"
@@ -84,11 +105,14 @@ do
                 done
 
                 # final payload for restore REST request
-                restore_rec='{  "vmName": null, "vmUuid": "'$vm_uuid'", "hypervisorUuid": "'$host_uuid'", "backupUuid": "'$backup_uuid'", "containerId": null, "createVm": true, "deleteOriginalVm": true, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": true, "startVgRestore": false, "targetVmUuid": null, "restoreDisk": null, "virtualNetworkList": '$vnet_list'  }'
+                if [ ! -z "$RESTORE_DS" ]; then
+                        restore_rec='{  "vmName": null, "vmUuid": "'$vm_uuid'", "hypervisorUuid": "'$host_uuid'", "backupUuid": "'$backup_uuid'", "containerId": "'$ds_uuid'", "createVm": true, "deleteOriginalVm": true, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": true, "startVgRestore": false, "targetVmUuid": null, "restoreDisk": null, "virtualNetworkList": '$vnet_list'  }'
+                else
+                        restore_rec='{  "vmName": null, "vmUuid": "'$vm_uuid'", "hypervisorUuid": "'$host_uuid'", "backupUuid": "'$backup_uuid'", "containerId": null, "createVm": true, "deleteOriginalVm": true, "powerOn": false, "restoreSource": "AUTO", "createVolumeGroup": false, "attachVolumeGroup": true, "startVgRestore": false, "targetVmUuid": null, "restoreDisk": null, "virtualNetworkList": '$vnet_list'  }'
+                fi
         fi
 
 #       # submit restore request
         rest_ret=`curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/restore" -d "$restore_rec" | jq ".message.titleDescriptionEn"`
         echo "$rest_ret"
-#       exit 0
 done
