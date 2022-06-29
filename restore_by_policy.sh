@@ -2,10 +2,10 @@
 # This script will run through all the VMs in a policy and perform a restore by cloning or overwriting the original VM.
 # The only variable that needs to be configured is RESTORE_MODE and optionally RESTORE_DS if restoring to alternate datastore
 
-hycuctlr="192.168.1.80"
-username="admin"
-pass="newadmin"
-policy_name="Bronze"
+HYCU_CTLR="192.168.1.80"
+USERNAME="admin"
+PASSWD="newadmin"
+POLICY_NAME="Bronze"
 
 ################################
 # Set the variable RESTORE_MODE to either CLONE or OVERWRITE which determines how the VMs are restored
@@ -18,37 +18,37 @@ RESTORE_MODE=OVERWRITE
 
 
 # request bearer TOKEN
-token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $username:$pass | base64)" "https://$hycuctlr:8443/rest/v1.0/requestToken" | jq -r '.token'`
+token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $USERNAME:$PASSWD | base64)" "https://$HYCU_CTLR:8443/rest/v1.0/requestToken" | jq -r '.token'`
 
 # convert TOKEN to base64
 btoken=$(echo -n $token | base64)
 
 # retrive the policy UUID for the given name
-policy_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/policies"  | jq -r ".entities[] | select (.name==\"$policy_name\") | .uuid"`
+policy_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/policies"  | jq -r ".entities[] | select (.name==\"$POLICY_NAME\") | .uuid"`
 
 if [ -z "$policy_uuid" ]; then
-        echo "Policy ($policy_name) not found"
+        echo "Policy ($POLICY_NAME) not found"
         exit 1
 fi
 
-echo "Policy $policy_name has a UUID of $policy_uuid"
+echo "Policy $POLICY_NAME has a UUID of $policy_uuid"
 
 
 # Retrieve list of VMs in policy by UUID
-vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$policy_uuid\") | .uuid"`
+vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$policy_uuid\") | .uuid"`
 
 
 # Loop through each VM to be restored
 for vm_uuid in $vm_list
 do
-        vm_name=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/$vm_uuid" | jq -r ".entities[].vmName"`
+        vm_name=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid" | jq -r ".entities[].vmName"`
 
         echo "----------"
         echo "VM name is $vm_name, VM uuid is $vm_uuid"
 
         # Retrieve the most recent restore point
 
-        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, hypervisorUuid, restorePointInMillis} "`
+        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, hypervisorUuid, restorePointInMillis} "`
 
         backup_uuid=`echo $backup_info | jq -r ".uuid"`
         host_uuid=`echo $backup_info | jq -r ".hypervisorUuid"`
@@ -62,7 +62,7 @@ do
         ds_uuid=null
         # Restore to different datastore
         if [ ! -z "$RESTORE_DS" ]; then
-                ds_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/$vm_uuid/restoreLocations?backupUuid=$backup_uuid"  | jq -r ".entities[] |  select (.name | contains(\"$RESTORE_DS\")) | .externalId"`
+                ds_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/restoreLocations?backupUuid=$backup_uuid"  | jq -r ".entities[] |  select (.name | contains(\"$RESTORE_DS\")) | .externalId"`
                 if [ -z "$ds_uuid" ]; then
                         echo "Datastore ($RESTORE_DS) not found"
                         exit 1
@@ -88,7 +88,7 @@ do
                 echo "restore name will be $vm_name"
 
                 # grab all vnets the VM is part of
-                readarray -t vnet_array < <(curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/backup/$backup_uuid/originalNetworks?uuid=$host_uuid" | jq -c  ".entities[] ")
+                readarray -t vnet_array < <(curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/backup/$backup_uuid/originalNetworks?uuid=$host_uuid" | jq -c  ".entities[] ")
 
                 # loop through each vnet the VM is part of, extacting the minimum fields for restore REST api call
                 vnet_list="[]"
@@ -113,6 +113,6 @@ do
         fi
 
 #       # submit restore request
-        rest_ret=`curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$hycuctlr:8443/rest/v1.0/vms/restore" -d "$restore_rec" | jq ".message.titleDescriptionEn"`
+        rest_ret=`curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/restore" -d "$restore_rec" | jq ".message.titleDescriptionEn"`
         echo "$rest_ret"
 done
