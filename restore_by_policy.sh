@@ -10,7 +10,7 @@ policy_name="Bronze"
 ################################
 # Set the variable RESTORE_MODE to either CLONE or OVERWRITE which determines how the VMs are restored
 # Uncomment RESTORE_DS if you want to restore to datastore other than the original location
-# If left uncommented, VM will be restored to original datastore
+# If left commented, VM will be restored to original datastore
 #RESTORE_MODE=CLONE
 RESTORE_MODE=OVERWRITE
 #RESTORE_DS="VM_DS1"
