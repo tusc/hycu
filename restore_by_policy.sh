@@ -33,7 +33,6 @@ fi
 
 echo "Policy $POLICY_NAME has a UUID of $policy_uuid"
 
-
 # Retrieve list of VMs in policy by UUID
 vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$policy_uuid\") | .uuid"`
 
