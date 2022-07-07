@@ -4,50 +4,62 @@
 
 HYCU_CTLR="192.168.1.80"
 USERNAME="admin"
-PASSWD="newadmin"
+#PASSWD="newadmin"
 POLICY_NAME="Bronze"
 
 ################################
 # Set the variable RESTORE_MODE to either CLONE or OVERWRITE which determines how the VMs are restored
 # Uncomment RESTORE_DS if you want to restore to datastore other than the original location
 # If left commented, VM will be restored to original datastore
-RESTORE_MODE=CLONE
-#RESTORE_MODE=OVERWRITE
-#RESTORE_DS="VM_DS1"
+# If PASSWD is left commented, user will prompted for password
+#RESTORE_MODE=CLONE
+RESTORE_MODE=OVERWRITE
+RESTORE_DS="VM_DS2"
 #################################
 
+# Check if PASSWORD is blank
+if [ -z "$PASSWD" ]; then
+        echo -n Enter password for HYCU user:
+        read -s PASSWD
+        echo
+fi
 
 # request bearer TOKEN
-token=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $USERNAME:$PASSWD | base64)" "https://$HYCU_CTLR:8443/rest/v1.0/requestToken" | jq -r '.token'`
+TOKEN=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $USERNAME:$PASSWD | base64)" "https://$HYCU_CTLR:8443/rest/v1.0/requestToken" | jq -r '.token'`
+
+if [ ! -n "$TOKEN" ]; then
+        echo "Incorrect password!"
+        exit 1
+fi
 
 # convert TOKEN to base64
-btoken=$(echo -n $token | base64)
+BTOKEN=$(echo -n $TOKEN | base64)
 
 # retrive the policy UUID for the given name
-policy_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/policies"  | jq -r ".entities[] | select (.name==\"$POLICY_NAME\") | .uuid"`
+POLICY_UUID=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/policies"  | jq -r ".entities[] | select (.name==\"$POLICY_NAME\") | .uuid"`
 
-if [ -z "$policy_uuid" ]; then
+if [ -z "$POLICY_UUID" ]; then
         echo "Policy ($POLICY_NAME) not found"
         exit 1
 fi
 
-echo "Policy $POLICY_NAME has a UUID of $policy_uuid"
+echo "Policy $POLICY_NAME has a UUID of $POLICY_UUID"
 
 # Retrieve list of VMs in policy by UUID
-vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$policy_uuid\") | .uuid"`
+vm_list=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms" | jq -r ".entities[] | select (.protectionGroupUuid==\"$POLICY_UUID\") | .uuid"`
 
 
 # Loop through each VM to be restored
 for vm_uuid in $vm_list
 do
-        vm_name=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid" | jq -r ".entities[].vmName"`
+        vm_name=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid" | jq -r ".entities[].vmName"`
 
         echo "----------"
         echo "VM name is $vm_name, VM uuid is $vm_uuid"
 
         # Retrieve the most recent restore point
 
-        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, hypervisorUuid, restorePointInMillis} "`
+        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, hypervisorUuid, restorePointInMillis} "`
 
         backup_uuid=`echo $backup_info | jq -r ".uuid"`
         host_uuid=`echo $backup_info | jq -r ".hypervisorUuid"`
@@ -61,7 +73,7 @@ do
         ds_uuid=null
         # Restore to different datastore
         if [ ! -z "$RESTORE_DS" ]; then
-                ds_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/restoreLocations?backupUuid=$backup_uuid"  | jq -r ".entities[] |  select (.name | contains(\"$RESTORE_DS\")) | .externalId"`
+                ds_uuid=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/restoreLocations?backupUuid=$backup_uuid"  | jq -r ".entities[] |  select (.name | contains(\"$RESTORE_DS\")) | .externalId"`
                 if [ -z "$ds_uuid" ]; then
                         echo "Datastore ($RESTORE_DS) not found"
                         exit 1
@@ -87,7 +99,7 @@ do
                 echo "restore name will be $vm_name"
 
                 # grab all vnets the VM is part of
-                readarray -t vnet_array < <(curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/backup/$backup_uuid/originalNetworks?uuid=$host_uuid" | jq -c  ".entities[] ")
+                readarray -t vnet_array < <(curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/backup/$backup_uuid/originalNetworks?uuid=$host_uuid" | jq -c  ".entities[] ")
 
                 # loop through each vnet the VM is part of, extacting the minimum fields for restore REST api call
                 vnet_list="[]"
@@ -112,6 +124,9 @@ do
         fi
 
 #       # submit restore request
-        rest_ret=`curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $btoken" "https://$HYCU_CTLR:8443/rest/v1.0/vms/restore" -d "$restore_rec" | jq ".message.titleDescriptionEn"`
+        rest_ret=`curl -s -X POST --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/restore" -d "$restore_rec" | jq ".message.titleDescriptionEn"`
         echo "$rest_ret"
 done
+
+# logout
+curl -s -X DELETE --insecure --header "Content-Type: application/json" --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/requestToken"  | jq -r
