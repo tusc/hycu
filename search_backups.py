@@ -1,10 +1,10 @@
 # Written by Carlos Talbot (carlos.talbot@hycu.com)
-# The following script will search backups of a VM for a key file within
-# all the subdirectories of the VM.
-# you run the script using the following syntax:
+# The following script will search backups of a VM for a specified filename within all the subdirectories of the VM.
+# You can run the script using the following syntax:
+#
 # python3 serach_backups.py -s<HYCU CTRL> -u<USERNAME> -p<PASSWORD> -v<VMNAME> -f<FILENAME>
 #
-# You can use grub.cfg as a filename to search for with a Linux VM as the grub volume is searched early in the mount process
+# You can use grub.cfg as a filename to search for within a Linux VM as the grub volume is searched early in the mount process
 # For Windows you can use desktop.ini
 
 import sys
