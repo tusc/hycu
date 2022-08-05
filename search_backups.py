@@ -4,7 +4,7 @@
 # you run the script using the following syntax:
 # python3 serach_backups.py -s<HYCU CTRL> -u<USERNAME> -p<PASSWORD> -v<VMNAME> -f<FILENAME>
 #
-# You can use grub.cfg for a Linux VM as the grub volume is found early in the mount
+# You can use grub.cfg as a filename to search for with a Linux VM as the grub volume is searched early in the mount process
 # For Windows you can use desktop.ini
 
 import sys
