@@ -258,7 +258,7 @@ def main(argv):
         print (vm['vmName'] + " is MOUNTED, resuing MountID....")
         mount_uuid=mount_state[0]['mountUuid']
 
-
+    # Time to walk the tree!
     results = huBrowseMount(mount_uuid,"")
 
     #unmount backup before exiting
