@@ -1,6 +1,10 @@
 # Written by Carlos Talbot (carlos.talbot@hycu.com)
 # The following script will mount the most recent bacukp image for a given VM and walk the directory tree
 
+# Written by Carlos Talbot (carlos.talbot@hycu.com)
+# The following script will search backups of a VM for a key file within
+# all the subdirectories of the VM.
+
 import sys
 import argparse
 import this
@@ -164,7 +168,6 @@ def huFindVM(vmname, ntimeout, pageSize):
     print ("VM " + vm['vmName'] + " found. VM UUID is " + vm['uuid'])
     return vm
 
-# this is a recurvise call that will go through all the subdirectories for a given VM backup image
 def huBrowseMount(mount_uuid, mountpath):
     endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=0)
@@ -174,6 +177,7 @@ def huBrowseMount(mount_uuid, mountpath):
 
     print ("Current directory " + mountpath)
     for i in data:
+#        print (i['fullItemName'])
         # subtypes:
         # type 1: file
         # type 2: directory
@@ -214,6 +218,9 @@ def main(argv):
     nTimeout = 5 if not args.timeout else int(args.timeout)
     pageSize = None if not args.pagesize else int(args.pagesize)
 
+    now = datetime.datetime.now()
+    print("Current Time =", now)
+
     vm = huFindVM(args.vm, nTimeout, pageSize)
 
     # retrieve all backups for VM
@@ -244,13 +251,13 @@ def main(argv):
 
     results = huBrowseMount(mount_uuid,"")
 
-    #unmont backup before exiting
-    #mount_data = huUnmountBackup(args.server, args.username, args.password, nTimeout, vm['uuid'], vmbackups[0]['uuid'])
-    exit (0)
-    if (status != 'OK'):
-        exit(1)
+    #unmont bacup before exiting
+#        mount_data = huUnmountBackup(args.server, args.username, args.password, nTimeout, vm['uuid'], vmbackups[0]['uuid'])
 
-    exit(0)
+    now = datetime.datetime.now()
+    print("Current Time =", now)
+
+    exit (0)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
