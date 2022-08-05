@@ -251,7 +251,7 @@ def main(argv):
 
     results = huBrowseMount(mount_uuid,"")
 
-    #unmont bacup before exiting
+    #unmount backup before exiting
 #        mount_data = huUnmountBackup(args.server, args.username, args.password, nTimeout, vm['uuid'], vmbackups[0]['uuid'])
 
     now = datetime.datetime.now()
