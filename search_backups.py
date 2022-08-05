@@ -74,7 +74,9 @@ def huGetJobStatus(jobUuid, timeout):
     endpoint = "jobs/%s?" %(jobUuid)
 
     data = huRestGeneric(endpoint, timeout, 1)
-    return data[0]['status']
+
+    return data
+#    return data[0]['status']
 
 # retrive all backups for a given VM
 def huGetVMBackups(ntimeout, pageSize, vmuuid):
@@ -112,8 +114,9 @@ def huMountBackup(timeout, vmuuid, backup_uuid):
     if jobUuid:
         status = 'EXECUTING';
         while status == 'EXECUTING':
-            time.sleep (2)
-            status = huGetJobStatus(server, username, password, jobUuid, timeout=timeout)
+            time.sleep (5)
+            status_ret = huGetJobStatus(jobUuid, timeout=timeout)
+            status = status_ret[0]['status']
             print('Job status - %s' %(status))
 
         print('Job complete. Status: %s\n' %(status))
@@ -145,7 +148,7 @@ def huUnmountBackup(timeout, vmuuid, backup_uuid):
         status = 'EXECUTING';
         while status == 'EXECUTING':
             time.sleep (1)
-            status = huGetJobStatus(server, username, password, jobUuid, timeout=timeout)
+            status = huGetJobStatus(jobUuid, timeout=timeout)
             print('Job status - %s' %(status))
 
         print('Job complete. Status: %s\n' %(status))
@@ -223,7 +226,7 @@ def main(argv):
 
     # REST call intializations
     nTimeout = 5 if not args.timeout else int(args.timeout)
-    pageSize = None if not args.pagesize else int(args.pagesize)
+    pageSize = 50 if not args.pagesize else int(args.pagesize)
 
     start_time = datetime.datetime.now()
     print("Current Time =", start_time)
@@ -250,7 +253,9 @@ def main(argv):
         if not mount_data['entities'][0]:
             print ("Mount error!")
             exit(1)
-        mount_uuid=mount_data['entities'][0]        
+        # grab mount id from checkmount
+        mount_state = huCheckMount(nTimeout, pageSize, vm['uuid'], vmbackups[0]['uuid'])
+        mount_uuid=mount_state[0]['mountUuid']        
     else:
         print (vm['vmName'] + " is MOUNTED, resuing MountID....")
         mount_uuid=mount_state[0]['mountUuid']
