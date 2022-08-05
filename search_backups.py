@@ -75,8 +75,7 @@ def huGetJobStatus(jobUuid, timeout):
 
     data = huRestGeneric(endpoint, timeout, 1)
 
-    return data
-#    return data[0]['status']
+    return data[0]['status']
 
 # retrive all backups for a given VM
 def huGetVMBackups(ntimeout, pageSize, vmuuid):
@@ -115,8 +114,7 @@ def huMountBackup(timeout, vmuuid, backup_uuid):
         status = 'EXECUTING';
         while status == 'EXECUTING':
             time.sleep (5)
-            status_ret = huGetJobStatus(jobUuid, timeout=timeout)
-            status = status_ret[0]['status']
+            status = huGetJobStatus(jobUuid, timeout=timeout)
             print('Job status - %s' %(status))
 
         print('Job complete. Status: %s\n' %(status))
