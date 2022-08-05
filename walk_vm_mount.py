@@ -164,6 +164,7 @@ def huFindVM(vmname, ntimeout, pageSize):
     print ("VM " + vm['vmName'] + " found. VM UUID is " + vm['uuid'])
     return vm
 
+# this is a recurvise call that will go through all the subdirectories for a given VM backup image
 def huBrowseMount(mount_uuid, mountpath):
     endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=0)
@@ -173,7 +174,6 @@ def huBrowseMount(mount_uuid, mountpath):
 
     print ("Current directory " + mountpath)
     for i in data:
-#        print (i['fullItemName'])
         # subtypes:
         # type 1: file
         # type 2: directory
