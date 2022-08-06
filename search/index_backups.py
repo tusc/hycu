@@ -1,8 +1,10 @@
 # Written by Carlos Talbot (carlos.talbot@hycu.com)
-# The following script index backups of a VM to a specified mongodb.
+# The following script index backups for a VM to a specified mongodb.
 # You can run the script using the following syntax:
 #
-# python3 serach_backups.py -s<HYCU CTRL> -u<USERNAME> -p<PASSWORD> -v<VMNAME> -f<FILENAME>
+# python index_backups.py -s<HYCU CTRL> -u<USERNAME> -p<PASSWORD> -v<VMNAME> -m<MONGODB CONN>
+#
+# For example python index_backups.py -s192.168.1.8 -uadmin -padmin -vEXCHANGE -m"mongodb://192.168.1.106:27017"
 #
 # You can use grub.cfg as a filename to search for within a Linux VM as the grub volume is searched early in the mount process
 # For Windows you can use desktop.ini
@@ -15,6 +17,7 @@ import this
 import requests
 import time
 import datetime
+import urllib.parse
 
 from pymongo import MongoClient
 from pprint import pprint
@@ -23,14 +26,13 @@ from pprint import pprint
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def huConnectDB():
+def huConnectDB(client, hycudb):
     # connect to MongoDB, change the << MONGODB URL >> to reflect your own connection string
     client = MongoClient("mongodb://192.168.1.106:27017")
     hycudb=client.hycu
     # Issue the serverStatus command and print the results
 #    serverStatusResult=db.command("serverStatus")
 #    pprint(serverStatusResult)
-
 
 def huFindItemByValue(items, propName, propValue):
     for key in items:
@@ -44,7 +46,9 @@ def huRestGeneric(url, timeout, pagesize, returnRaw=False, maxitems=None):
         pageNumber = 1
         while True:
             requestUrl = "https://%s:8443/rest/v1.0/%spageSize=%d&pageNumber=%d" %(server, url, pagesize, pageNumber)
-            response = requests.get(requestUrl,auth=(username,password), cert="",timeout=timeout,verify=False)
+            # make sure spaces, # and other special characters are encoded
+            parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
+            response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
             if response.status_code != 200:
                 print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
                 exit(response.status_code)
@@ -64,7 +68,9 @@ def huRestGeneric(url, timeout, pagesize, returnRaw=False, maxitems=None):
             pageNumber += 1
     else:
         requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
-        response = requests.get(requestUrl,auth=(username,password), cert="",timeout=timeout,verify=False)
+        # make sure spaces, # and other special characters are encoded
+        parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
+        response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
         if response.status_code != 200:
             print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
             exit(response.status_code)
@@ -97,6 +103,32 @@ def huGetVMBackups(ntimeout, pageSize, vmuuid):
  
     data = huRestGeneric(endpoint, ntimeout, pageSize)
     return data
+
+# populate MongoDB with latest VM backup list
+def hUpdateVMBackups(ntimeout, pageSize):
+    # first drop exitsing collection (table)
+
+    hycucol = hycudb["backups"]
+    hycucol.drop()
+
+    endpoint = "vms/backups?"
+
+    data = huRestGeneric(endpoint, ntimeout, pageSize)
+    for item in data:
+        result=hycudb.backups.insert_one(item)   
+
+# populate MongoDB with latest VM list
+def hUpdateVMs(ntimeout, pageSize):
+    # first drop exitsing collection (table)
+
+    hycucol = hycudb["vms"]
+    hycucol.drop()
+    
+    endpoint = "vms?"
+
+    data = huRestGeneric(endpoint, ntimeout, pageSize)
+    for item in data:
+        result=hycudb.vms.insert_one(item)          
 
 # check to see if VM mount is active
 def huCheckMount(ntimeout, pageSize, vmuuid, backup_uuid):
@@ -208,10 +240,6 @@ def huBrowseMount(mountpath):
         # type 10: symlink
         # type 18: Windows Drive
         subType=i['subType']
-#        if subType == 1 and i['displayName'] == search_file:
-#            
-#            print ("Found " + i['displayName'] + "!!!!!!!!")
-#            print ("Full PATH: " + i['fullItemName'])
         if subType == 2 and i['displayName'] != "lost+found"  :
             huBrowseMount(mountpath + i['displayName'] + "/")
         elif subType == 18 and i['displayName'] != "System Reserved":
@@ -234,7 +262,7 @@ def main(argv):
     myParser.add_argument("-u", "--username", help="HYCU Username", required=True)
     myParser.add_argument("-p", "--password", help="HYCU Password", required=True)
     myParser.add_argument("-v", "--vm", help="VM to be searched up", required=True)    
-    myParser.add_argument("-f", "--filename", help="filename to search", required=True)
+    myParser.add_argument("-m", "--mongodb", help="Connection string to Mongodb", required=True)
     myParser.add_argument("-sf", "--statusfilter", choices=['EXECUTING', 'OK', 'WARNING', 'ERROR', 'FATAL', 'QUEUED', 'ABORTED'], help="Filter jobs", required=False)
     myParser.add_argument("-i", "--timeout", help="Advanced: REST Query timeout [default=5]", required=False)
     myParser.add_argument("-z", "--pagesize", help="Advanced: REST Query pagesize [default=None]", required=False)
@@ -247,16 +275,19 @@ def main(argv):
     username=args.username
     password=args.password
     server=args.server
-    search_file=args.filename
-
+  
     # REST call intializations
     nTimeout = 5 if not args.timeout else int(args.timeout)
     pageSize = 50 if not args.pagesize else int(args.pagesize)
 
 # connect to MongoDB, change the << MONGODB URL >> to reflect your own connection string
-    client = MongoClient("mongodb://192.168.1.106:27017")
+    client = MongoClient(args.mongodb)
     hycudb=client.hycu
-#    huConnectDB()
+
+    #refersh VM backups list in MongoDB with latest
+    hUpdateVMBackups(nTimeout, pageSize)
+    #refersh VM list in MongoDB with latest
+    hUpdateVMs(nTimeout, pageSize)    
 
     start_time = datetime.datetime.now()
     print("Current Time =", start_time)
