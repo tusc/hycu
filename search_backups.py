@@ -169,7 +169,7 @@ def huFindVM(vmname, ntimeout, pageSize):
     print ("VM " + vm['vmName'] + " found. VM UUID is " + vm['uuid'])
     return vm
 
-def huBrowseMount(mount_uuid, mountpath):
+def huBrowseMount(mountpath):
     endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=0)
 
@@ -190,9 +190,9 @@ def huBrowseMount(mount_uuid, mountpath):
                 print ("Found " + i['displayName'] + "!!!!!!!!")
                 print ("Full PATH: " + i['fullItemName'])
         elif subType == 2 and i['displayName'] != "lost+found"  :
-            huBrowseMount(mount_uuid, mountpath + i['displayName'] + "/")
+            huBrowseMount(mountpath + i['displayName'] + "/")
         elif subType == 18 and i['displayName'] != "System Reserved":
-            huBrowseMount(mount_uuid, mountpath + i['fullItemName'] + "/")
+            huBrowseMount(mountpath + i['fullItemName'] + "/")
 
 def main(argv):
     # Parse command line parameters VM and/or status
@@ -216,6 +216,7 @@ def main(argv):
     global password
     global server
     global search_file
+    global mount_uuid
 
     username=args.username
     password=args.password
@@ -259,7 +260,7 @@ def main(argv):
         mount_uuid=mount_state[0]['mountUuid']
 
     # Time to walk the tree!
-    results = huBrowseMount(mount_uuid,"")
+    results = huBrowseMount("")
 
     #unmount backup before exiting
 #        mount_data = huUnmountBackup(args.server, args.username, args.password, nTimeout, vm['uuid'], vmbackups[0]['uuid'])
