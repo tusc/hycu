@@ -163,7 +163,7 @@ def huFindVM(vmname, ntimeout, pageSize):
     # Check if the given VM name is valid
     vm = huFindItemByValue(vms, 'vmName', vmname)
     if (vm == None):
-        print('Status:', 'Cannot find VM "%s" in the list of HYCU VMs' %(args.vm))
+        print('Status:', 'Cannot find VM "%s" in the list of HYCU VMs' %(vmname))
         exit(1)
 
     print ("VM " + vm['vmName'] + " found. VM UUID is " + vm['uuid'])
@@ -236,7 +236,7 @@ def main(argv):
     
     if not vmbackups:
         print ("No backups found!")
-        exit (10)
+        exit (1)
 
     # get backup time from most recent backup
     backup_time = ((vmbackups[0]['restorePointInMillis']+500)/1000)
