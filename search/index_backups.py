@@ -26,14 +26,6 @@ from pprint import pprint
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def huConnectDB(client, hycudb):
-    # connect to MongoDB, change the << MONGODB URL >> to reflect your own connection string
-    client = MongoClient("mongodb://192.168.1.106:27017")
-    hycudb=client.hycu
-    # Issue the serverStatus command and print the results
-#    serverStatusResult=db.command("serverStatus")
-#    pprint(serverStatusResult)
-
 def huFindItemByValue(items, propName, propValue):
     for key in items:
         if items[key][propName] == propValue:
@@ -106,8 +98,7 @@ def huGetVMBackups(ntimeout, pageSize, vmuuid):
 
 # populate MongoDB with latest VM backup list
 def hUpdateVMBackups(ntimeout, pageSize):
-    # first drop exitsing collection (table)
-
+    # first drop exitsing backup collection (table)
     hycucol = hycudb["backups"]
     hycucol.drop()
 
@@ -119,8 +110,7 @@ def hUpdateVMBackups(ntimeout, pageSize):
 
 # populate MongoDB with latest VM list
 def hUpdateVMs(ntimeout, pageSize):
-    # first drop exitsing collection (table)
-
+    # first drop exitsing VM collection (table)
     hycucol = hycudb["vms"]
     hycucol.drop()
     
@@ -222,17 +212,14 @@ def huBrowseMount(mountpath):
     endpoint = "mounts/" + mount_uuid + "/browse?path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=50)
 
-# write record to database
-#    dict = {}
+# write directory record to MongoDB
     for item in data:
         item.update({"backupUuid":backup_uuid})
         item.update({"vmUuid":vm_uuid})      
         result=hycudb.files.insert_one(item)
-#        dict[item['uuid']] = item
 
     print ("Current directory " + mountpath)
     for i in data:
-#        print (i['fullItemName'])
         # subtypes:
         # type 1: file
         # type 2: Linux & Windows directory
@@ -255,6 +242,9 @@ def main(argv):
     global hycudb
     global backup_uuid
     global vm_uuid
+
+    # A lot of global definitions in order to reduce variables on the stack during recurvise call
+    # to browse the directory tree
 
     # Parse command line parameters VM and/or status
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
@@ -328,7 +318,7 @@ def main(argv):
     results = huBrowseMount("")
 
     #unmount backup before exiting
-#        mount_data = huUnmountBackup(args.server, args.username, args.password, nTimeout, vm['uuid'], vmbackups[0]['uuid'])
+    mount_data = huUnmountBackup(dnTimeout, vm['uuid'], vmbackups[0]['uuid'])
 
     end_time = datetime.datetime.now()
     print("Current Time =", end_time)
