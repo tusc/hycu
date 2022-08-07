@@ -206,8 +206,8 @@ def huFindVM(vmname, ntimeout, pageSize):
     return vm
 
 def huBrowseMount(mountpath):
-    endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
-    data = huRestGeneric(endpoint, timeout=100, pagesize=0)
+#    endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
+#    data = huRestGeneric(endpoint, timeout=100, pagesize=0)
 
     endpoint = "mounts/" + mount_uuid + "/browse?path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=50)
@@ -318,7 +318,7 @@ def main(argv):
     results = huBrowseMount("")
 
     #unmount backup before exiting
-    mount_data = huUnmountBackup(dnTimeout, vm['uuid'], vmbackups[0]['uuid'])
+    mount_data = huUnmountBackup(nTimeout, vm['uuid'], vmbackups[0]['uuid'])
 
     end_time = datetime.datetime.now()
     print("Current Time =", end_time)
