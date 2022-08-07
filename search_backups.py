@@ -13,6 +13,7 @@ import this
 import requests
 import time
 import datetime
+import urllib.parse
 
 # Avoid security exceptions/warnings
 import urllib3
@@ -30,7 +31,9 @@ def huRestGeneric(url, timeout, pagesize, returnRaw=False, maxitems=None):
         pageNumber = 1
         while True:
             requestUrl = "https://%s:8443/rest/v1.0/%spageSize=%d&pageNumber=%d" %(server, url, pagesize, pageNumber)
-            response = requests.get(requestUrl,auth=(username,password), cert="",timeout=timeout,verify=False)
+            # make sure spaces, # and other special characters are encoded            
+            parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
+            response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
             if response.status_code != 200:
                 print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
                 exit(response.status_code)
@@ -50,7 +53,9 @@ def huRestGeneric(url, timeout, pagesize, returnRaw=False, maxitems=None):
             pageNumber += 1
     else:
         requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
-        response = requests.get(requestUrl,auth=(username,password), cert="",timeout=timeout,verify=False)
+        # make sure spaces, # and other special characters are encoded            
+        parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")        
+        response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
         if response.status_code != 200:
             print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
             exit(response.status_code)
@@ -170,8 +175,8 @@ def huFindVM(vmname, ntimeout, pageSize):
     return vm
 
 def huBrowseMount(mountpath):
-    endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
-    data = huRestGeneric(endpoint, timeout=100, pagesize=0)
+#    endpoint = "mounts/" + mount_uuid + "/browse?filter=subType==2&orderBy=displayName&path=" + mountpath + "&"
+#    data = huRestGeneric(endpoint, timeout=100, pagesize=0)
 
     endpoint = "mounts/" + mount_uuid + "/browse?path=" + mountpath + "&"
     data = huRestGeneric(endpoint, timeout=100, pagesize=50)
