@@ -85,8 +85,6 @@ def main(argv):
      
     # Loop through all the controller IPs that were read from the json file
     for i in data['ctrl_details']:
-#        print("Checking status of controller " + i['vm'])
-
         server=i['address']
 
         # lets find out controller name and what version controller is running.
