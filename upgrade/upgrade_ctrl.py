@@ -9,6 +9,7 @@ import urllib.parse
 import requests
 import threading
 import time
+import argparse
 
 # Avoid security exceptions/warnings
 import urllib3
@@ -70,11 +71,23 @@ def main(argv):
     global username
     global password
 
-    # will convert to this command line parameters
-    username="admin"
-    password="admin"
+    # Parse command line parameters
+    myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
+    myParser.add_argument("-u", "--username", help="HYCU Username", required=True)
+    myParser.add_argument("-p", "--password", help="HYCU Password", required=True)
+    myParser.add_argument("-f", "--filename", help="name of JSON file with list of controllers", required=True)
+
+    args = myParser.parse_args(argv)
+    username=args.username
+    password=args.password
+    filename=args.filename
+
+    if len(sys.argv)==1:
+        myParser.print_help()
+        exit(1)
+
     # Opening JSON file
-    f = open('hycuctrl.json')
+    f = open(filename)
     
     # returns JSON object as 
     # a dictionary
