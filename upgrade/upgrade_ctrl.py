@@ -8,6 +8,7 @@ import sys
 import urllib.parse
 import requests
 import threading
+import time
 
 # Avoid security exceptions/warnings
 import urllib3
@@ -49,11 +50,11 @@ def huRestGeneric(server, url, timeout, pagesize, returnRaw=False, maxitems=None
             exit(response.status_code)
         data = response.json()
         items = data['entities']
-    return itemsh
+    return items
 
 
 def request_task(url, headers):
-    ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=320)
+    ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=None)
     return ret
 
 # Submit REST POST via thread asynchrounsly
@@ -62,17 +63,16 @@ def async_upgrade(url, headers):
 
 # Submit REST POST and wait for return
 def nonsync_upgrade(url, headers):
-    ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=320)
+    ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=None)
     return ret
 
 def main(argv):
     global username
     global password
 
-
     # will convert to this command line parameters
-    username="testuser"
-    password="newadmin"
+    username="admin"
+    password="admin"
     # Opening JSON file
     f = open('hycuctrl.json')
     
@@ -90,7 +90,10 @@ def main(argv):
         # lets find out controller name and what version controller is running.
         endpoint = "administration/controller?"
         data=huRestGeneric(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
-        ctrl_name=data[0]['controllerVmName']
+        if (data[0]['backupControllerMode'] == 'BC'):
+            ctrl_name=data[0]['controllerVmName']
+        else:
+            ctrl_name="Manager of Managers"            
         print ("Checking " + ctrl_name )
         print ("Controller type: " + data[0]['backupControllerMode'])        
         print ("Running version: " + data[0]['softwareVersion'] + " on this controller")
@@ -115,6 +118,7 @@ def main(argv):
             if (async_mode):
                 # Submit RESTful POST command via thread and continue onto next controller
                 async_upgrade(requestUrl, headers)
+                time.sleep(5)
             else:
                 response = nonsync_upgrade(requestUrl, headers)
                 if response.status_code not in [200,201,202]:
@@ -127,7 +131,7 @@ def main(argv):
 
     f.close()
 
-    print("Waiting for upgrades to complete")
+    print("Upgrades running in the background. Please hit ctrl-c to break out once all controllers have completed their upgrade.")
     exit (0)
 
 if __name__ == "__main__":
