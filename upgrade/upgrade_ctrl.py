@@ -1,21 +1,26 @@
 # Written by Carlos Talbot
-# This script will upgrade HYCU controller, filers and managers.
-# a simple json file is required for storing the IP addresses of all the contollers
+# This script will upgrade HYCU controllers and manager of managers.
+# A simple json file is required for storing the IP or DNS name of all the contollers.
   
 import json
+#from datetime import datetime
+import datetime
 from pickle import TRUE
 import sys
 import urllib.parse
 import requests
-import threading
+import multiprocessing
 import time
 import argparse
+from requests.exceptions import Timeout
 
 # Avoid security exceptions/warnings
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def huRestGeneric(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
+# this function returns the results of a REST call with the entities section of the JSON data
+# in one or more records
+def huRestEnt(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
     if pagesize > 0:
         items = []
         pageNumber = 1
@@ -23,7 +28,12 @@ def huRestGeneric(server, url, timeout, pagesize, returnRaw=False, maxitems=None
             requestUrl = "https://%s:8443/rest/v1.0/%spageSize=%d&pageNumber=%d" %(server, url, pagesize, pageNumber)
             # make sure spaces, # and other special characters are encoded
             parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
-            response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
+            try:
+                response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
+            except Exception as e:
+                print('Timeout has been raised reaching ' + server)
+                print(e)
+                return              
             if response.status_code != 200:
                 print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
                 exit(response.status_code)
@@ -45,7 +55,13 @@ def huRestGeneric(server, url, timeout, pagesize, returnRaw=False, maxitems=None
         requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
         # make sure spaces, # and other special characters are encoded
         parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
-        response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
+        try:
+            response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
+        except Exception as e:
+            print('Timeout has been raised reaching ' + server)
+            print(e)
+            return   
+
         if response.status_code != 200:
             print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
             exit(response.status_code)
@@ -53,23 +69,56 @@ def huRestGeneric(server, url, timeout, pagesize, returnRaw=False, maxitems=None
         items = data['entities']
     return items
 
+# this function returns the results of a REST call with the all of the JSON data for one record
+def huRestGeneric(server, url, timeout):
+    requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
+    # make sure spaces, # and other special characters are encoded
+    parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
+    try:
+        response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
+    except Exception as e:
+        print('Timeout has been raised reaching ' + server)
+        print(e)
+        return    
+    if response.status_code != 200:
+        print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
+        exit(response.status_code)
+    return response.json()
 
-def request_task(url, headers):
+# fuctino to submit POST as a thread via mutliprocess
+def request_task(url, headers, username, password):
+    # Submit image upgrade request, sit here indefinitely until killed by parent
+    # when Controller state is no longer UPGRADING
     ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=None)
-    return ret
 
 # Submit REST POST via thread asynchrounsly
-def async_upgrade(url, headers):
-    threading.Thread(target=request_task, args=(url, headers)).start()
+def async_post(server, url):
+    header = {
+       'Content-Type': 'application/json',
+       'Accept': 'application/json, text/plain, */*'
+    }
+    requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)    
+    process = multiprocessing.Process(target=request_task, args=(requestUrl, header, username, password))
+    process.start()
+    # keep track of newly created thread for later termination
+    all_processes.append(process)
 
-# Submit REST POST and wait for return
-def nonsync_upgrade(url, headers):
-    ret=requests.post(url,auth=(username,password), cert="", headers=headers, verify=False, timeout=None)
+# Submit nonasync REST POST and wait for return
+def nonasync_post(server, url, timeout):
+    header = {
+       'Content-Type': 'application/json',
+       'Accept': 'application/json, text/plain, */*'
+    }
+    requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
+    ret=requests.post(requestUrl,auth=(username,password), cert="", headers=header, verify=False, timeout=timeout)
     return ret
 
 def main(argv):
     global username
     global password
+    global all_processes
+    all_processes = []
+    server_list = []
 
     # Parse command line parameters
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
@@ -96,13 +145,19 @@ def main(argv):
     # With async set to true, we do not wait for the restful API POST command and continue on to the next controller.
     async_mode=True
      
+    start_time = datetime.datetime.now()
+    print("Current Time =", start_time)
+
     # Loop through all the controller IPs that were read from the json file
     for i in data['ctrl_details']:
         server=i['address']
 
         # lets find out controller name and what version controller is running.
         endpoint = "administration/controller?"
-        data=huRestGeneric(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
+        data=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
+        if data is None:
+            # can't reach controller, go to next on the list            
+            continue
         if (data[0]['backupControllerMode'] == 'BC'):
             ctrl_name=data[0]['controllerVmName']
         else:
@@ -111,9 +166,14 @@ def main(argv):
         print ("Controller type: " + data[0]['backupControllerMode'])        
         print ("Running version: " + data[0]['softwareVersion'] + " on this controller")
 
+        print("Checking status of controller " + server)
+        endpoint = "administration/controller/state?"
+        response = huRestGeneric(server, endpoint, timeout=60)
+        print("Controller state: " + response['message']['titleDescriptionEn'])
+
         print("Please wait, checking for upgrade images...")
         endpoint = "upgrade/images?"
-        data=huRestGeneric(server, endpoint, timeout=60, pagesize=50, returnRaw=False, maxitems=None)
+        data=huRestEnt(server, endpoint, timeout=60, pagesize=50, returnRaw=False, maxitems=None)
 
         # Data will be non-empty if there are new images that can be applied
         if (data):
@@ -123,28 +183,56 @@ def main(argv):
             print ("Upgrading...")
             imageID=data[0]['uuid']
             imageName=data[0]['name']
-            requestUrl = "https://%s:8443/rest/v1.0/upgrade/%s/%s" %(server, imageID, imageName)
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json, text/plain, */*'
-            }
+            endpoint = "upgrade/%s/%s" %(imageID, imageName)
             if (async_mode):
-                # Submit RESTful POST command via thread and continue onto next controller
-                async_upgrade(requestUrl, headers)
-                time.sleep(5)
+                # keep track of controller address to check state after upgrade
+                server_list.append(server)
+                # Submit RESTful POST command via thread and continue onto next controller                
+                async_post(server, endpoint)
             else:
-                response = nonsync_upgrade(requestUrl, headers)
+                response = nonasync_post(server, endpoint, timeout=60)
                 if response.status_code not in [200,201,202]:
-                    print('Status:', response.status_code, 'Failed to upgrade controller %s with uuid %s.\n\nDetailed API response:' %(ctrl_name, imageID))
+                    print("Status:" + response.status_code + "Failed to upgrade controller " + ctrl_name + "with uuid " + imageID + "\n\nDetailed API response:")
                     print(response.text)
                     exit(1)
         else:
             print ("No upgrade available for this controller")
         print()
+        time.sleep(3)
+
+    i=0
+    # Loop through all threads until upgrades have completed
+    for process in all_processes:
+        server = server_list[i]
+        print("Checking status of controller " + server)        
+        while True:
+            endpoint = "administration/controller/state?"
+            # Check controller state
+            response = huRestGeneric(server, endpoint, timeout=120)
+            if response is None:
+                # we hit a REST get timeout during VM shutdown/startup
+                # retry
+                print("Server in middle of shutdown/startup...retrying")
+                time.sleep(5)
+                continue
+            state = response['message']['titleDescriptionEn']
+            print(state)
+            if not ("UPGRADING") in state:            
+                # Controller state can be UPGRADING, STARTING or RUNNING
+                # If state is the latter two than upgrade has completed, time to kill thread
+                # and move onto the next controller
+                print("killing thread for controller " + server)
+                process.terminate()
+                break
+            time.sleep(30)             
+        i=i+1
 
     f.close()
-
-    print("Upgrades running in the background. Please hit ctrl-c to break out once all controllers have completed their upgrade.")
+    print()
+    print("Upgrades have completed")
+    end_time = datetime.datetime.now()
+    print("Current Time =", end_time)
+    print("Time elapsed in seconds =", end_time - start_time)    
     exit (0)
 
 if __name__ == "__main__":
