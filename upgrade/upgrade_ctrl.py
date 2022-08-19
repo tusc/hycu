@@ -169,7 +169,7 @@ def main(argv):
         print("Checking status of controller " + server)
         endpoint = "administration/controller/state?"
         response = huRestGeneric(server, endpoint, timeout=60)
-        print("Controller state: " + response['message']['titleDescriptionEn'])
+        print(response['message']['titleDescriptionEn'])
 
         print("Please wait, checking for upgrade images...")
         endpoint = "upgrade/images?"
