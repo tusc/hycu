@@ -4,7 +4,7 @@
 # 2022/08/12 Initial release
 # 2022/08/13 Add option to specify filename
 # 2022/08/18 Update to leverage async post method
-# 2022/08/19 Updated to select most recent firmware image and optional dry run flag
+# 2022/08/19 Updated to select most recent firmware image and optional dry run flag. Ensure controller is in running state
   
 import json
 #from datetime import datetime
@@ -164,7 +164,11 @@ def main(argv):
         print("Checking status of controller " + server)
         endpoint = "administration/controller/state?"
         response = huRestGeneric(server, endpoint, timeout=60)
-        print(response['message']['titleDescriptionEn'])
+        state = response['message']['titleDescriptionEn']
+        print(state)
+        if not ("RUNNING") in state:
+            print ("Controller not in running state...skipping..")
+            continue
 
         print("Please wait, checking for upgrade images...")
         endpoint = "upgrade/images?"
