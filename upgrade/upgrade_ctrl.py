@@ -1,6 +1,10 @@
 # Written by Carlos Talbot
 # This script will upgrade HYCU controllers and manager of managers.
 # A simple json file is required for storing the IP or DNS name of all the contollers.
+# 2022/08/12 Initial release
+# 2022/08/13 Add option to specify filename
+# 2022/08/18 Update to leverage async post method
+# 2022/08/19 Updated to select most recent firmware image and optional dry run flag
   
 import json
 #from datetime import datetime
@@ -103,16 +107,6 @@ def async_post(server, url):
     # keep track of newly created thread for later termination
     all_processes.append(process)
 
-# Submit nonasync REST POST and wait for return
-def nonasync_post(server, url, timeout):
-    header = {
-       'Content-Type': 'application/json',
-       'Accept': 'application/json, text/plain, */*'
-    }
-    requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
-    ret=requests.post(requestUrl,auth=(username,password), cert="", headers=header, verify=False, timeout=timeout)
-    return ret
-
 def main(argv):
     global username
     global password
@@ -125,11 +119,15 @@ def main(argv):
     myParser.add_argument("-u", "--username", help="HYCU Username", required=True)
     myParser.add_argument("-p", "--password", help="HYCU Password", required=True)
     myParser.add_argument("-f", "--filename", help="name of JSON file with list of controllers", required=True)
+    myParser.add_argument("-d", "--dryrun", help="Advanced: True = just list firmware versions available", required=False)    
+    myParser.add_argument("-v", "--version", help="Advanced: specify firmware version [default=most recent]", required=False)
 
     args = myParser.parse_args(argv)
     username=args.username
     password=args.password
     filename=args.filename
+    version=None if not args.version else (args.version)
+    dryrun=None if not args.dryrun else (args.dryrun)
 
     if len(sys.argv)==1:
         myParser.print_help()
@@ -141,10 +139,7 @@ def main(argv):
     # returns JSON object as 
     # a dictionary
     data = json.load(f)
-
-    # With async set to true, we do not wait for the restful API POST command and continue on to the next controller.
-    async_mode=True
-     
+    
     start_time = datetime.datetime.now()
     print("Current Time =", start_time)
 
@@ -177,29 +172,35 @@ def main(argv):
 
         # Data will be non-empty if there are new images that can be applied
         if (data):
-            for i in data:    
-                print ("Availabe image: " + i['name'])
+            # -1 below denotes last element on list. This ensures most recent backup image is selected for upgrade
+            # unless we pass --version flag to specify a particular version.
+            firmware_idx=-1
+            j=0
+            for ctrl in data:
+                if ctrl['name'] == version:
+                    firmware_idx=j
+                print ("Availabe image: " + ctrl['name'])
+                j=j+1
 
-            print ("Upgrading...")
-            imageID=data[0]['uuid']
-            imageName=data[0]['name']
-            endpoint = "upgrade/%s/%s" %(imageID, imageName)
-            if (async_mode):
+            imageID=data[firmware_idx]['uuid']
+            imageName=data[firmware_idx]['name']
+            print ("Selected image " + imageName)
+
+            if not dryrun:
+                endpoint = "upgrade/%s/%s" %(imageID, imageName)
                 # keep track of controller address to check state after upgrade
                 server_list.append(server)
                 # Submit RESTful POST command via thread and continue onto next controller                
                 async_post(server, endpoint)
             else:
-                response = nonasync_post(server, endpoint, timeout=60)
-                if response.status_code not in [200,201,202]:
-                    print("Status:" + response.status_code + "Failed to upgrade controller " + ctrl_name + "with uuid " + imageID + "\n\nDetailed API response:")
-                    print(response.text)
-                    exit(1)
+                print("Skipping upgrade, dry run...")
+
         else:
             print ("No upgrade available for this controller")
         print()
-        time.sleep(3)
 
+    # ensure that at least first contrller is in upgrade mode
+    time.sleep(10)
     i=0
     # Loop through all threads until upgrades have completed
     for process in all_processes:
@@ -224,12 +225,14 @@ def main(argv):
                 print("killing thread for controller " + server)
                 process.terminate()
                 break
+            # wait 30 seconds before we check state of controller
             time.sleep(30)             
         i=i+1
 
     f.close()
     print()
-    print("Upgrades have completed")
+    if not dryrun:
+        print("Upgrades have completed")
     end_time = datetime.datetime.now()
     print("Current Time =", end_time)
     print("Time elapsed in seconds =", end_time - start_time)    
