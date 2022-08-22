@@ -208,8 +208,8 @@ def main(argv):
             print ("No upgrade available for this controller")
         print()
 
-    # Sleep brifly to ensure that at least first contrller is in upgrade mode. If we arrive here to early, the first controller
-    # will be in RUNNING state and we assume it has already been upgraded.
+    # Sleep brifly to ensure that at least first contrller is in upgrade mode. If we arrive here too early, the first controller
+    # will still be in RUNNING state and we assume it has already been upgraded.
     time.sleep(10)
     i=0
     # Loop through all threads until upgrades have completed
