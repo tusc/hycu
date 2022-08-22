@@ -4,10 +4,10 @@
 # 2022/08/12 Initial release
 # 2022/08/13 Add option to specify filename
 # 2022/08/18 Update to leverage async post method
-# 2022/08/19 Updated to select most recent firmware image and optional dry run flag. Ensure controller is in running state
+# 2022/08/19 Updated to select most recent firmware image and optional dry run flag. Ensure controller is in running state before upgrade
+# 2022/08/22 Added code to check for invalid username/password
   
 import json
-#from datetime import datetime
 import datetime
 from pickle import TRUE
 import sys
@@ -37,7 +37,10 @@ def huRestEnt(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
             except Exception as e:
                 print('Timeout has been raised reaching ' + server)
                 print(e)
-                return              
+                return
+            if response.status_code == 401:
+                print('Status:', response.status_code, 'Invalid username or password for controller ' + server)
+                return                              
             if response.status_code != 200:
                 print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
                 exit(response.status_code)
@@ -65,7 +68,9 @@ def huRestEnt(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
             print('Timeout has been raised reaching ' + server)
             print(e)
             return   
-
+        if response.status_code == 401:
+            print('Status:', response.status_code, 'Invalid username or password for controller ' + server)
+            return   
         if response.status_code != 200:
             print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
             exit(response.status_code)
@@ -203,7 +208,8 @@ def main(argv):
             print ("No upgrade available for this controller")
         print()
 
-    # ensure that at least first contrller is in upgrade mode
+    # Sleep brifly to ensure that at least first contrller is in upgrade mode. If we arrive here to early, the first controller
+    # will be in RUNNING state and we assume it has already been upgraded.
     time.sleep(10)
     i=0
     # Loop through all threads until upgrades have completed
@@ -216,7 +222,7 @@ def main(argv):
             response = huRestGeneric(server, endpoint, timeout=120)
             if response is None:
                 # we hit a REST get timeout during VM shutdown/startup
-                # retry
+                # Sleep briefly and retry
                 print("Server in middle of shutdown/startup...retrying")
                 time.sleep(5)
                 continue
