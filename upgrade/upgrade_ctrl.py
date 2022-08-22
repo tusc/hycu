@@ -166,7 +166,7 @@ def main(argv):
         print ("Controller type: " + data[0]['backupControllerMode'])        
         print ("Running version: " + data[0]['softwareVersion'] + " on this controller")
 
-        print("Checking status of controller " + server)
+        print("Checking status of controller " + ctrl_name + "[" + server + "]")
         endpoint = "administration/controller/state?"
         response = huRestGeneric(server, endpoint, timeout=60)
         state = response['message']['titleDescriptionEn']
