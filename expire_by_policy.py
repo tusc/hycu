@@ -2,7 +2,7 @@
 # This script will expire backups for VMs in a given policy.
 # TO execute you need to pass the following parameters:
 # 
-# python3 expire_by_policy.py -u<username> -p<password> -j<policy name> [-dTrue]
+# python3 expire_by_policy.py -u<username> -p<password> -j<policy name> -s<controller IP/DNS> [-dTrue]
 #
 # The last parameter is optional and will do a dry run through the VMs without expiring backups
 #
