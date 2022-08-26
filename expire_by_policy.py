@@ -24,41 +24,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # this function returns the results of a REST call with the entities section of the JSON data
 # in one or more records
 def huRestEnt(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
-    if pagesize > 0:
-        items = []
-        pageNumber = 1
-        while True:
-            requestUrl = "https://%s:8443/rest/v1.0/%spageSize=%d&pageNumber=%d" %(server, url, pagesize, pageNumber)
-            # make sure spaces, # and other special characters are encoded
-            parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
-            try:
-                response = requests.get(parseURL,auth=(username,password), cert="",timeout=timeout,verify=False)
-            except Exception as e:
-                print('Timeout has been raised reaching ' + server)
-                print(e)
-                return
-            if response.status_code == 401:
-                print('Status:', response.status_code, 'Invalid username or password for controller ' + server)
-                return                              
-            if response.status_code != 200:
-                print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
-                exit(response.status_code)
 
-            if returnRaw == True:
-                return response
-            
-            data = response.json()
-            items += data['entities']
-            pagesize = (data['metadata']['pageSize'])
-
-            # Exit the loop if we retrieved all of the items
-            if len(items) == (data['metadata']['totalEntityCount']):
-                break
-            if (maxitems != None) and maxitems < len(items):
-                break
-            pageNumber += 1
-    else:
-        requestUrl = "https://%s:8443/rest/v1.0/%s" %(server, url)
+    items = []
+    pageNumber = 1
+    while True:
+        requestUrl = "https://%s:8443/rest/v1.0/%spageSize=%d&pageNumber=%d" %(server, url, pagesize, pageNumber)
         # make sure spaces, # and other special characters are encoded
         parseURL = urllib.parse.quote(requestUrl, safe=":/&?=")
         try:
@@ -66,15 +36,28 @@ def huRestEnt(server, url, timeout, pagesize, returnRaw=False, maxitems=None):
         except Exception as e:
             print('Timeout has been raised reaching ' + server)
             print(e)
-            return   
+            return
         if response.status_code == 401:
             print('Status:', response.status_code, 'Invalid username or password for controller ' + server)
-            return   
+            return                              
         if response.status_code != 200:
             print('Status:', response.status_code, 'Failed to retrieve REST results. Exiting.')
             exit(response.status_code)
+
+        if returnRaw == True:
+            return response
+        
         data = response.json()
-        items = data['entities']
+        items += data['entities']
+        pagesize = (data['metadata']['pageSize'])
+
+        # Exit the loop if we retrieved all of the items
+        if len(items) == (data['metadata']['totalEntityCount']):
+            break
+        if (maxitems != None) and maxitems < len(items):
+            break
+        pageNumber += 1
+
     return items
 
 # Submit REST Delete
