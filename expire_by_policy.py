@@ -151,7 +151,6 @@ def main(argv):
                 backup_type=vm_backup['type']
                 print (backup_uuid + " type " + backup_type)
 
-#                if not dryrun:
                 if not dryrun:
                     endpoint = "vms/%s/backup/%s?type=BACKUP_AND_COPY" %(vm_uuid, backup_uuid)
                     # Submit RESTful POST command via thread and continue onto next controller
