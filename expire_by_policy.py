@@ -149,15 +149,15 @@ def main(argv):
                     ret=huDelete(server, endpoint)
                     print (ret['message']['titleDescriptionEn'])                
 
-            # get all snapshots for VM
-            endpoint = "vms/" + vm_uuid + "/snapshots?"
-            snapshot_list=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
-
             # are we deleting nutanix snapshots too?
             if nutanix_snaps:
                 # Check if VM is on a Nutanix cluster
                 if (vm_type == "KVM" or vm_type == "VMware"):
                     print("Erasing snapshots for VM - " + vm_name)
+                    # get all snapshots for VM
+                    endpoint = "vms/" + vm_uuid + "/snapshots?"
+                    snapshot_list=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
+
                     # go through each snapshot for a VM and delete them
                     for vm_snapshot in snapshot_list:
                         snapshot_uuid=vm_snapshot['uuid']
