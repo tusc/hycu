@@ -1,10 +1,11 @@
 # Written by Carlos Talbot
 # This script will expire backups for VMs in a given policy.
-# To execute you need to pass the following parameters:
+# TO execute you need to pass the following parameters:
 # 
-# python3 expire_by_policy.py -u<username> -p<password> -j<policy name> -s<controller IP/DNS> [-dTrue]
+# python3 expire_by_policy.py -u<username> -p<password> -j<policy name> [-dTrue] [-nTrue]
 #
-# The last parameter is optional and will do a dry run through the VMs without expiring backups
+# The last two parameters are optional. The first will do a dry run through the VMs without expiring backups.
+# The second is to delete Nutanix snapshots in addition to backups.
 #
 # 2022/08/26 Initial release
 #
@@ -81,12 +82,14 @@ def main(argv):
     myParser.add_argument("-s", "--server", help="HYCU controller IP/DNS name", required=True)
     myParser.add_argument("-j", "--policy", help="Policy to expire backups from", required=True)    
     myParser.add_argument("-d", "--dryrun", help="Advanced: True = just list which VMs will be expired", required=False)
+    myParser.add_argument("-n", "--nutanix", help="Advanced: True = also delete Nutanix snapshosts", required=False)
 
     args = myParser.parse_args(argv)
     username=args.username
     password=args.password
     policy=args.policy
     server=args.server
+    nutanix_snaps=args.nutanix
     dryrun=None if not args.dryrun else (args.dryrun)
 
     if len(sys.argv)==1:
@@ -114,6 +117,8 @@ def main(argv):
         print ("Can't find VMs")            
         exit(1)
 
+    if dryrun:
+        print("#############  Skipping deletion, dry run #############")
     start_time = datetime.datetime.now()
     print("Current Time =", start_time)
 
@@ -122,6 +127,11 @@ def main(argv):
         if (vm['protectionGroupUuid'] == policy_uuid):
             vm_uuid = vm['uuid']
             vm_name = vm['vmName']
+            vm_type = vm['externalHypervisorType']
+            # type can be vSphere, KVM or VMware
+
+            print ("vm name " + vm_name)
+            print ("Hypervisor type " + vm_type)
 
             # get all backups for VM
             endpoint = "vms/" + vm_uuid + "/backups?"
@@ -136,11 +146,30 @@ def main(argv):
 
                 if not dryrun:
                     endpoint = "vms/%s/backup/%s?type=BACKUP_AND_COPY" %(vm_uuid, backup_uuid)
-                    # Submit RESTful POST command via thread and continue onto next controller
+                    # Submit RESTful DELETE command
                     ret=huDelete(server, endpoint)
                     print (ret['message']['titleDescriptionEn'])                
-                else:
-                    print("Skipping deletion, dry run...")
+
+            # get all snapshots for VM
+            endpoint = "vms/" + vm_uuid + "/snapshots?"
+            snapshot_list=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
+
+            # are we deleting nutanix snapshots too?
+            if nutanix_snaps:
+                # Check if VM is on a Nutanix cluster
+                if (vm_type == "KVM" or vm_type == "VMware"):
+                    print("Erasing snapshots for VM - " + vm_name)
+                    # go through each snapshot for a VM and delete them
+                    for vm_snapshot in snapshot_list:
+                        snapshot_uuid=vm_snapshot['uuid']
+                        print ("Snapshot " + snapshot_uuid)
+
+                        if not dryrun:
+                            endpoint = "vms/%s/backup/%s?type=SNAPSHOT" %(vm_uuid, snapshot_uuid)
+                            # Submit RESTful DELETE command
+                            ret=huDelete(server, endpoint)
+                            print (ret['message']['titleDescriptionEn'])                
+
             print()
 
     end_time = datetime.datetime.now()
