@@ -12,9 +12,6 @@
 # 2022/08/27 Updated to include snapshot as source
 
 from http import client
-#from sqlite3 import dbapi2
-from pickle import TRUE
-#from pickle import FALSE
 import sys
 import argparse
 import this
@@ -57,16 +54,6 @@ def huRestGeneric(url, timeout, pagesize, returnRaw=False, maxitems=None):
         pageNumber += 1
 
     return items
-
-def huGetVMs(timeout, pagesize):
-    """ Retrieves VM list and return a dictionary """
-    dict = {}
-    endpoint = "vms?forceSync=false&"
-
-    data = huRestGeneric(endpoint, timeout, pagesize)
-    for item in data:
-        dict[item['uuid']] = item
-    return dict
 
 # check state of running job
 def huGetJobStatus(jobUuid, timeout):
@@ -115,13 +102,11 @@ def huExpireOldFiles():
     # return all active unique backup UUIDs from the backups table
     backup_uuids = hycucol_backups.distinct('uuid')
 
-    print("before uuid remove")
-    col_count=hycucol_files.count_documents( {'backupUuid': {'$nin': backup_uuids}} )
-    #if 
-    #print ())
-    print("after uuid remove")    
+ #   print("before uuid remove")
+ #   col_count=hycucol_files.count_documents( {'backupUuid': {'$nin': backup_uuids}} )
+#    print("after uuid remove")    
     # backup_uuids.remove("05fc727b-3277-4efe-bc10-a3e3d323a289")
-    print (hycucol_files.count_documents( {'backupUuid': {'$nin': backup_uuids}} ))
+#    print (hycucol_files.count_documents( {'backupUuid': {'$nin': backup_uuids}} ))
 
     rec_count=hycucol_files.count_documents( {'backupUuid': {'$nin': backup_uuids}})
     print(f'removing {rec_count} records')
@@ -263,6 +248,7 @@ def main(argv):
     username=args.username
     password=args.password
     server=args.server
+    vm_name=args.vm
   
     # REST call intializations
     nTimeout = 60
@@ -288,14 +274,14 @@ def main(argv):
     print("Current Time =", start_time)
 
     # find VM
-    endpoint = "vms?filter=vmName##" + args.vm + "&"    
+    endpoint = "vms?filter=vmName##" + vm_name + "&"    
     vm=huRestGeneric(endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
     if not vm:
         # can't find VM, exit
         print ("Can't find VM " + vm_name)            
         exit(1)
 
-    vm_uuid=vm[0]['uuid']
+    vm_uuid = vm[0]['uuid']
     vm_type = vm[0]['externalHypervisorType']
 
     use_snap = None
@@ -326,9 +312,6 @@ def main(argv):
     backup_uuid=vmbackups[0]['uuid']
 
     if (use_snap):
-        # get backup time from most recent backup
-        #backup_time = ((vmbackups[0]['restorePointInMillis']+500)/1000)
-        #backup_str = datetime.datetime.fromtimestamp(backup_time).strftime('%c')
         print ("Searching snapshot " + backup_uuid)
     else:
         # get backup time from most recent backup
@@ -337,15 +320,15 @@ def main(argv):
         print ("Searching " + vmbackups[0]['type'] + " from " + backup_str + " on " + vmbackups[0]['primaryTargetName'])
 
     # check if VM has any mounts currently
-    mount_state = huCheckMount(mount_type,nTimeout, pageSize, vm[0]['uuid'], vmbackups[0]['uuid'])
+    mount_state = huCheckMount(mount_type,nTimeout, pageSize, vm_uuid, backup_uuid)
     if not mount_state[0]['mounted']:
         print (vm[0]['vmName'] + " is not MOUNTED...mounting..")
-        mount_data = huMount(mount_type,nTimeout, vm[0]['uuid'], vmbackups[0]['uuid'])
+        mount_data = huMount(mount_type, nTimeout, vm_uuid, backup_uuid)
         if not mount_data['entities'][0]:
             print ("Mount error!")
             exit(1)
         # grab mount id from checkmount
-        mount_state = huCheckMount(mount_type,nTimeout, pageSize, vm[0]['uuid'], vmbackups[0]['uuid'])
+        mount_state = huCheckMount(mount_type, nTimeout, pageSize, vm_uuid, backup_uuid)
         mount_uuid=mount_state[0]['mountUuid']        
     else:
         print (vm[0]['vmName'] + " is MOUNTED, resuing MountID....")
@@ -355,7 +338,7 @@ def main(argv):
     results = huBrowseMount("")
 
     #unmount backup before exiting
-    mount_data = huUnmount(mount_type,nTimeout, vm[0]['uuid'], vmbackups[0]['uuid'])
+    mount_data = huUnmount(mount_type, nTimeout, vm_uuid, backup_uuid)
 
     end_time = datetime.datetime.now()
     print("Current Time =", end_time)
