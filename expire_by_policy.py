@@ -9,7 +9,6 @@
 #
 # 2022/08/26 Initial release
 #
-  
 
 import datetime
 import sys
