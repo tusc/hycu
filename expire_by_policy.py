@@ -127,7 +127,7 @@ def main(argv):
             vm_uuid = vm['uuid']
             vm_name = vm['vmName']
             vm_type = vm['externalHypervisorType']
-            # type can be vSphere, KVM or VMware
+            # type can be Physical, vSphere, KVM or VMware
 
             print ("vm name " + vm_name)
             print ("Hypervisor type " + vm_type)
@@ -135,6 +135,12 @@ def main(argv):
             # get all backups for VM
             endpoint = "vms/" + vm_uuid + "/backups?"
             backup_list=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
+
+            if not backup_list:
+                # can't find any backups, continue to next VM
+                print ("Can't find backups for " + vm_name)
+                print ()            
+                continue
 
             print("Erasing backups for VM - " + vm_name)
             # go through each backup (full or incremental) for a VM and delete them
