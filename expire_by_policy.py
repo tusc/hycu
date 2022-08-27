@@ -5,7 +5,7 @@
 # python3 expire_by_policy.py -u<username> -p<password> -j<policy name> -s<controller IP/DNS> [-dTrue] [-nTrue]
 #
 # The last two parameters are optional. The first (-dTrue) will do a dry run through the VMs without expiring backups.
-# The second (-nTrue) is to delete Nutanix snapshots in addition to backups.
+# The second (-nTrue) will delete Nutanix snapshots in addition to backups.
 #
 # 2022/08/26 Initial release
 #
