@@ -8,7 +8,7 @@
 # The second (-nTrue) will delete Nutanix snapshots in addition to backups.
 #
 # 2022/08/26 Initial release
-#
+# 2022/08/27 Allow snapshot deletion
 
 import datetime
 import sys
