@@ -6,6 +6,9 @@
 #
 # For example python3 gcp_backup_by_vm.py -vfinance-dev-deploy -sgcpkeys.json
 #
+# This script requires two Google modules:
+# google-api-python-client & google-auth which can be installed via pip
+#
 # 2022/09/20 Initial release
 
 import sys
