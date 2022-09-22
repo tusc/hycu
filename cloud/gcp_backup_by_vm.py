@@ -4,7 +4,7 @@
 #
 # gcp_backup_by_vms.py -v<VMNAME> -f<JSON FILE>
 #
-# For example python3 gcp_backup_by_vm.py -vfinance-dev-deploy -sgcpkeys.json
+# For example python3 gcp_backup_by_vm.py -vfinance-dev-deploy -fgcpkeys.json
 #
 # This script requires two Google modules:
 # google-api-python-client & google-auth which can be installed via pip
@@ -46,7 +46,7 @@ def get_manager_url(connection, header):
     connection.request(method="GET", url=url, body={}, headers=header)
     r = connection.getresponse()
     output = json.loads(r.read())
-    return output['items'][0]['subscriptions'][0]['managerUrl'].split('//')[1]
+    return output['items'][0]['subscriptions']
 
 def get_all_protection_sets(connection, header):
     url = "/api/v2/management/protectionSets"
@@ -115,25 +115,27 @@ def main(argv):
             'Authorization' : id_token
     }
 
-    # Establish connection to Manager
-    MANAGER_ENDPOINT = get_manager_url(registry_endpoint_connection, headers)
-    print("Manager URL: " + MANAGER_ENDPOINT)
-    manager_endpoint_connection = http.client.HTTPSConnection(MANAGER_ENDPOINT,context=ssl._create_unverified_context())
+    MANAGER_ENDPOINTS = get_manager_url(registry_endpoint_connection, headers)
+    # grab all manager endpoints
+    for manager in MANAGER_ENDPOINTS:
+        manager_url=manager['managerUrl'].split('//')[1]
+        print("Manager URL: " + manager_url)
+        manager_endpoint_connection = http.client.HTTPSConnection(manager_url,context=ssl._create_unverified_context())
 
-    # find all Protection sets
-    prosets=get_all_protection_sets(manager_endpoint_connection,headers)
-    for proset in prosets:
-        print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
-        # find all VMs in Protection Set
-        vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
-        # check if VM list is empty
-        if vms:
-            for vm in vms:
-                print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-                if vm['name'] == VM_NAME:
-                    print ("Found VM to backup!")
-                    r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
-                    print_response(r)
+        # find all Protection sets
+        prosets=get_all_protection_sets(manager_endpoint_connection,headers)
+        for proset in prosets:
+            print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
+            # find all VMs in Protection Set
+            vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
+            # check if VM list is empty
+            if vms:
+                for vm in vms:
+                    print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
+                    if vm['name'] == VM_NAME:
+                        print ("Found VM to backup!")
+                        r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
+                        print_response(r)
 
     exit (0)
 
