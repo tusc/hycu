@@ -2,14 +2,16 @@
 # The following script will look for all VMs within all protection sets and trigger a backup if they are in a policy
 # You can run the script using the following syntax:
 #
-# gcp_backup_all.py -f<JSON FILE>
+# gcp_backup_all.py -f<JSON FILE> [-p<PROTECTION SET>]
 #
 # For example python3 gcp_backup_all.py -fgcpkeys.json
+# You can optionally specify a protection set, e.g.: python3 gcp_backup_all.py -fgcpkeys.json -pproduction
 #
 # This script requires two Google modules:
 # google-api-python-client & google-auth which can be installed via pip
 #
 # 2022/09/21 Initial release
+# 2022/09/22 Add support to search all manager URLs and optionally specify a Protection Set
 
 import sys
 import json
@@ -46,7 +48,7 @@ def get_manager_url(connection, header):
     connection.request(method="GET", url=url, body={}, headers=header)
     r = connection.getresponse()
     output = json.loads(r.read())
-    return output['items'][0]['subscriptions'][0]['managerUrl'].split('//')[1]
+    return output['items'][0]['subscriptions']
 
 def get_all_protection_sets(connection, header):
     url = "/api/v2/management/protectionSets"
@@ -107,7 +109,8 @@ def print_response(response):
 def main(argv):
     # Parse command line parameters VM and/or status
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
-    myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)           
+    myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)
+    myParser.add_argument("-p", "--proset", help="Optional: specify Protection Set", required=False)               
 
     if len(sys.argv)==1:
         myParser.print_help()
@@ -115,6 +118,7 @@ def main(argv):
 
     args = myParser.parse_args(argv)
     SERVICE_ACCOUNT_FILE=args.file
+    PROSET=args.proset
 
     # Establish connection to Registry
     registry_endpoint_connection = http.client.HTTPSConnection(REGISTRY_ENDPOINT)
@@ -125,29 +129,33 @@ def main(argv):
             'Authorization' : id_token
     }
 
-    # Establish connection to Manager
-    MANAGER_ENDPOINT = get_manager_url(registry_endpoint_connection, headers)
-    print("Manager URL: " + MANAGER_ENDPOINT)
-    manager_endpoint_connection = http.client.HTTPSConnection(MANAGER_ENDPOINT,context=ssl._create_unverified_context())
+    MANAGER_ENDPOINTS = get_manager_url(registry_endpoint_connection, headers)
+    # grab all manager endpoints
+    for manager in MANAGER_ENDPOINTS:
+        manager_url=manager['managerUrl'].split('//')[1]
+        print("Manager URL: " + manager_url)
+        manager_endpoint_connection = http.client.HTTPSConnection(manager_url,context=ssl._create_unverified_context())
 
-    # find all Protection sets
-    prosets=get_all_protection_sets(manager_endpoint_connection,headers)
-    for proset in prosets:
-        print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
-        # find all VMs in Protection Set
-        vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
-        if vms:
-            for vm in vms:
-                print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-                # check if VM in policy, otherwise don't back it up
-                inpolicy=get_vm_info(manager_endpoint_connection,headers,proset['uuid'],vm['uuid'])
-                try:
-                    if inpolicy[0]['policyUuid']:
-                        print('*** VM %s is in policy: %s, backing up' %(vm['name'], inpolicy[0]['policyName']))
-                        r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
-                        print_response(r)        
-                except:
-                    continue
+        # find all Protection sets
+        prosets=get_all_protection_sets(manager_endpoint_connection,headers)
+        for proset in prosets:
+
+            if ( PROSET and PROSET==proset['name']) or ( not PROSET):            
+                print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
+                # find all VMs in Protection Set
+                vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
+                if vms:
+                    for vm in vms:
+                        print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
+                        # check if VM in policy, otherwise don't back it up
+                        inpolicy=get_vm_info(manager_endpoint_connection,headers,proset['uuid'],vm['uuid'])
+                        try:
+                            if inpolicy[0]['policyUuid']:
+                                print('*** VM %s is in policy: %s, backing up' %(vm['name'], inpolicy[0]['policyName']))
+                            # r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
+                            # print_response(r)        
+                        except:
+                            continue
     exit (0)
 
 if __name__ == "__main__":
