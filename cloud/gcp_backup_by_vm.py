@@ -2,15 +2,15 @@
 # The following script will look for a VM within all protection sets and trigger a backup of that VM
 # You can run the script using the following syntax:
 #
-# gcp_backup_by_vms.py -v<VMNAME> -f<JSON FILE>
+# gcp_backup_by_vms.py --limit <VMNAME> -f<JSON FILE>
 #
-# For example python3 gcp_backup_by_vm.py -vfinance-dev-deploy -fgcpkeys.json
+# For example python3 gcp_backup_by_vm.py --limit finance-dev-deploy -fgcpkeys.json
 #
 # This script requires two Google modules:
 # google-api-python-client & google-auth which can be installed via pip
 #
 # 2022/09/20 Initial release
-# 2022/9/21 Updated to search multiple manager URLs
+# 2022/09/21 Updated to search multiple manager URLs and use new paramter (--limit) to specify instance name
 
 import sys
 import json
@@ -96,7 +96,7 @@ def print_response(response):
 def main(argv):
     # Parse command line parameters VM and/or status
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
-    myParser.add_argument("-v", "--vm", help="VM to be searched", required=True)
+    myParser.add_argument("-l", "--limit", help="VM to be searched", required=True)
     myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)           
 
     if len(sys.argv)==1:
@@ -104,8 +104,10 @@ def main(argv):
         exit(1)
 
     args = myParser.parse_args(argv)
-    VM_NAME=args.vm
+    VM_NAME=args.limit
     SERVICE_ACCOUNT_FILE=args.file
+
+    print('Backing up '+ VM_NAME)
 
     # Establish connection to Registry
     registry_endpoint_connection = http.client.HTTPSConnection(REGISTRY_ENDPOINT)
