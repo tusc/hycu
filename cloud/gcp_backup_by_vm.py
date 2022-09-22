@@ -10,6 +10,7 @@
 # google-api-python-client & google-auth which can be installed via pip
 #
 # 2022/09/20 Initial release
+# 2022/9/21 Updated to search multiple manager URLs
 
 import sys
 import json
