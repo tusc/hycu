@@ -13,6 +13,7 @@
 # 2022/09/20 Initial release
 # 2022/09/21 Updated to search multiple manager URLs and use new paramter (--limit) to specify instance name
 # 2022/09/22 Add verbose flag and optional protection set
+# 2022/09/23 Check to make sure VM is part of policy before backing it up
 
 import sys
 import json
@@ -89,6 +90,18 @@ def backup_vm(protection_set_uuid, vm_uuid, connection, header):
     connection.request(method="POST", url=url, body=json_body,headers=header)
     return connection.getresponse()
 
+def get_vm_info(connection, header, protect_uuid, policy_uuid):
+    url = "/api/v2/protectionSets/{}/vms/{}".format(protect_uuid, policy_uuid)
+
+    connection.request(method="GET", url=url, body={}, headers=header)
+    # catch any exceptions if protection set is empty
+    try:
+        r = connection.getresponse()
+        output = json.loads(r.read())
+        return output['items']
+    except Exception as e:
+        return
+
 def print_response(response):
     print('Response status: %d' % response.status)
     temp = response.read()
@@ -146,15 +159,20 @@ def main(argv):
                 debug_print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
                 # find all VMs in Protection Set
                 vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
-                # check if VM list is empty
+                # check to make sure VM list is not empty
                 if vms:
                     for vm in vms:
                         debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-                        if (vm['name'] == VM_NAME) or (not VM_NAME):
-                            debug_print ("Found VM to backup!")
-                            r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
-                            print_response(r)
-
+                        if (VM_NAME == vm['name']) or (not VM_NAME):
+                            #make sure VM is in a policy or we can't back it up. Also don't backup VMs in exclude policy
+                            inpolicy=get_vm_info(manager_endpoint_connection,headers,proset['uuid'],vm['uuid'])
+                            try:
+                                if (inpolicy[0]['policyUuid']) and (inpolicy[0]['policyName']!= "exclude"):
+                                    debug_print('*** VM %s is in policy: %s, backing up' %(vm['name'], inpolicy[0]['policyName']))
+                                    r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
+                                    print_response(r)        
+                            except:
+                                continue
     exit (0)
 
 if __name__ == "__main__":
