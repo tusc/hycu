@@ -2,7 +2,7 @@
 # The following script will look for a VM within all protection sets and trigger a backup of that VM
 # You can run the script using the following syntax:
 #
-# gcp_backup_by_vms.py --limit <VMNAME> -f<JSON FILE>
+# gcp_backup_by_vms.py --limit <VMNAME> -f<JSON FILE> [-v=TRUE]
 #
 # For example python3 gcp_backup_by_vm.py --limit finance-dev-deploy -fgcpkeys.json
 #
@@ -11,6 +11,7 @@
 #
 # 2022/09/20 Initial release
 # 2022/09/21 Updated to search multiple manager URLs and use new paramter (--limit) to specify instance name
+# 2022/09/22 Add verbose flag
 
 import sys
 import json
@@ -25,6 +26,10 @@ REGISTRY_ENDPOINT = 'endpoints.hycu.com'
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 CLIENT_ID = '225038073315-sbrhk8s4hgucmhk1hnd2h2t6ofp0ff5g.apps.googleusercontent.com'
 
+def debug_print(str):
+    if VERBOSE:
+        print(str)
+
 def request_id_token(client_id, scopes, request_service_account):
     # Generate credentials
     credentials = service_account.Credentials.from_service_account_file(request_service_account, scopes=scopes)
@@ -32,7 +37,7 @@ def request_id_token(client_id, scopes, request_service_account):
     with open(request_service_account) as f:
         data_file = json.load(f)
     email = data_file["client_email"]
-    print("Generating ID token for Service Account '%s'..." % email)
+    debug_print("Generating ID token for Service Account '%s'..." % email)
     name = 'projects/-/serviceAccounts/' + email
     generate_id_token_request = {
     'includeEmail': True,
@@ -93,26 +98,33 @@ def print_response(response):
     except JSONDecodeError:
         print(temp)
 
+
+
 def main(argv):
+    global VERBOSE
+
     # Parse command line parameters VM and/or status
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
     myParser.add_argument("-l", "--limit", help="VM to be searched", required=True)
-    myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)           
+    myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)
+    myParser.add_argument("-v", "--verbose", help="Verbose output", required=False)           
 
     if len(sys.argv)==1:
         myParser.print_help()
         exit(1)
 
+    VERBOSE=None
     args = myParser.parse_args(argv)
     VM_NAME=args.limit
     SERVICE_ACCOUNT_FILE=args.file
+    VERBOSE=args.verbose
 
-    print('Backing up '+ VM_NAME)
+    debug_print('Backing up '+ VM_NAME)
 
     # Establish connection to Registry
     registry_endpoint_connection = http.client.HTTPSConnection(REGISTRY_ENDPOINT)
     id_token = request_id_token(CLIENT_ID, SCOPES, SERVICE_ACCOUNT_FILE)
-    print("Token:\n%s" % id_token)
+    debug_print("Token:\n%s" % id_token)
     headers = {
             'Content-type' : 'application/json',
             'Authorization' : id_token
@@ -122,19 +134,19 @@ def main(argv):
     # grab all manager endpoints
     for manager in MANAGER_ENDPOINTS:
         manager_url=manager['managerUrl'].split('//')[1]
-        print("Manager URL: " + manager_url)
+        debug_print("Manager URL: " + manager_url)
         manager_endpoint_connection = http.client.HTTPSConnection(manager_url,context=ssl._create_unverified_context())
 
         # find all Protection sets
         prosets=get_all_protection_sets(manager_endpoint_connection,headers)
         for proset in prosets:
-            print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
+            debug_print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
             # find all VMs in Protection Set
             vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
             # check if VM list is empty
             if vms:
                 for vm in vms:
-                    print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
+                    debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
                     if vm['name'] == VM_NAME:
                         print ("Found VM to backup!")
                         r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
