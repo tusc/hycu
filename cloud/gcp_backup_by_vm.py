@@ -1,8 +1,9 @@
 # Written by Carlos Talbot (carlos.talbot@hycu.com)
-# The following script will look for a VM within all protection sets and trigger a backup of that VM
+# The following script will backup one or more VMs for all protection sets.
+# You can restrict the scope to one VM and or one protection set.
 # You can run the script using the following syntax:
 #
-# gcp_backup_by_vms.py --limit <VMNAME> -f<JSON FILE> [-v=TRUE]
+# gcp_backup_by_vms.py -f<JSON FILE> [--limit <VMNAME>] [-v=TRUE] [-p=<PROTECTION SET>]
 #
 # For example python3 gcp_backup_by_vm.py --limit finance-dev-deploy -fgcpkeys.json
 #
@@ -11,7 +12,7 @@
 #
 # 2022/09/20 Initial release
 # 2022/09/21 Updated to search multiple manager URLs and use new paramter (--limit) to specify instance name
-# 2022/09/22 Add verbose flag
+# 2022/09/22 Add verbose flag and optional protection set
 
 import sys
 import json
@@ -98,16 +99,15 @@ def print_response(response):
     except JSONDecodeError:
         print(temp)
 
-
-
 def main(argv):
     global VERBOSE
 
     # Parse command line parameters VM and/or status
     myParser = argparse.ArgumentParser(description="HYCU for Enterprise Clouds backup and archive")
-    myParser.add_argument("-l", "--limit", help="VM to be searched", required=True)
+    myParser.add_argument("-l", "--limit", help="Optional: VM to be searched", required=False)
     myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)
-    myParser.add_argument("-v", "--verbose", help="Verbose output", required=False)           
+    myParser.add_argument("-v", "--verbose", help="Optional: Verbose output", required=False)
+    myParser.add_argument("-p", "--proset", help="Optional: specify Protection Set", required=False)                
 
     if len(sys.argv)==1:
         myParser.print_help()
@@ -118,13 +118,15 @@ def main(argv):
     VM_NAME=args.limit
     SERVICE_ACCOUNT_FILE=args.file
     VERBOSE=args.verbose
+    PROSET=args.proset    
 
-    debug_print('Backing up '+ VM_NAME)
+    if VM_NAME:
+        debug_print('Backing up '+ VM_NAME)
 
     # Establish connection to Registry
     registry_endpoint_connection = http.client.HTTPSConnection(REGISTRY_ENDPOINT)
     id_token = request_id_token(CLIENT_ID, SCOPES, SERVICE_ACCOUNT_FILE)
-    debug_print("Token:\n%s" % id_token)
+    #debug_print("Token:\n%s" % id_token)
     headers = {
             'Content-type' : 'application/json',
             'Authorization' : id_token
@@ -140,17 +142,18 @@ def main(argv):
         # find all Protection sets
         prosets=get_all_protection_sets(manager_endpoint_connection,headers)
         for proset in prosets:
-            debug_print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
-            # find all VMs in Protection Set
-            vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
-            # check if VM list is empty
-            if vms:
-                for vm in vms:
-                    debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-                    if vm['name'] == VM_NAME:
-                        print ("Found VM to backup!")
-                        r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
-                        print_response(r)
+            if ( PROSET and PROSET==proset['name']) or ( not PROSET):
+                debug_print('Protectionset name: %s, Protectionset UUID: %s' %(proset['name'], proset['uuid']))
+                # find all VMs in Protection Set
+                vms=get_all_protection_set_vms(manager_endpoint_connection,headers,proset['uuid'])
+                # check if VM list is empty
+                if vms:
+                    for vm in vms:
+                        debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
+                        if (vm['name'] == VM_NAME) or (not VM_NAME):
+                            print ("Found VM to backup!")
+                            #r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
+                            #print_response(r)
 
     exit (0)
 
