@@ -151,7 +151,7 @@ def main(argv):
                     for vm in vms:
                         debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
                         if (vm['name'] == VM_NAME) or (not VM_NAME):
-                            print ("Found VM to snapshot!")
+                            debug_print ("Found VM to backup!")
                             r = backup_vm(proset['uuid'], vm['uuid'], manager_endpoint_connection, headers)
                             print_response(r)
 
