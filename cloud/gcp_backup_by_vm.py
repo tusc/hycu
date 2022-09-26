@@ -3,10 +3,14 @@
 # You can restrict the scope to one VM and or one protection set.
 # You can run the script using the following syntax:
 #
-# gcp_backup_by_vms.py -f<JSON FILE> [--limit <VMNAME>] [-v=TRUE] [-p=<PROTECTION SET>]
+# gcp_backup_by_vms.py -f<JSON FILE> [--limit <VMNAME>] [--verbose=TRUE] [--proset=<PROTECTION SET>] [--all=TRUE]
 #
 # For example python3 gcp_backup_by_vm.py --limit finance-dev-deploy -fgcpkeys.json
 #
+# The --limit paramter specifies which VM to backup
+# The --proset paramter will restrict which protection sets will be in scope for backup
+# The --all paramter will backup all VMs in the protection sets.
+# If you don't specify the --limit or -all paramater then 
 # This script requires two Google modules:
 # google-api-python-client & google-auth which can be installed via pip
 #
@@ -14,6 +18,7 @@
 # 2022/09/21 Updated to search multiple manager URLs and use new paramter (--limit) to specify instance name
 # 2022/09/22 Add verbose flag and optional protection set
 # 2022/09/23 Check to make sure VM is part of policy before backing it up
+# 2022/09/23 Optional paramter to backup all VMs
 
 import sys
 import json
@@ -120,7 +125,8 @@ def main(argv):
     myParser.add_argument("-l", "--limit", help="Optional: VM to be searched", required=False)
     myParser.add_argument("-f", "--file", help="JSON credentials file", required=True)
     myParser.add_argument("-v", "--verbose", help="Optional: Verbose output", required=False)
-    myParser.add_argument("-p", "--proset", help="Optional: specify Protection Set", required=False)                
+    myParser.add_argument("-p", "--proset", help="Optional: specify Protection Set", required=False)
+    myParser.add_argument("-a", "--all", help="Optional: Backup ALL VMS!", required=False)                  
 
     if len(sys.argv)==1:
         myParser.print_help()
@@ -132,6 +138,7 @@ def main(argv):
     SERVICE_ACCOUNT_FILE=args.file
     VERBOSE=args.verbose
     PROSET=args.proset    
+    BACKUP_ALL=args.all
 
     if VM_NAME:
         debug_print('Backing up '+ VM_NAME)
@@ -163,7 +170,8 @@ def main(argv):
                 if vms:
                     for vm in vms:
                         debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-                        if (VM_NAME == vm['name']) or (not VM_NAME):
+#                        if (VM_NAME == vm['name']) or (not VM_NAME):
+                        if (VM_NAME == vm['name']) or (BACKUP_ALL):                            
                             #make sure VM is in a policy or we can't back it up. Also don't backup VMs in exclude policy
                             inpolicy=get_vm_info(manager_endpoint_connection,headers,proset['uuid'],vm['uuid'])
                             try:
