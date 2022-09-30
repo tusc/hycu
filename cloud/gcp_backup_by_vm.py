@@ -170,7 +170,6 @@ def main(argv):
                 if vms:
                     for vm in vms:
                         debug_print('VM Name name: %s, VM UUID: %s' %(vm['name'], vm['uuid']))
-#                        if (VM_NAME == vm['name']) or (not VM_NAME):
                         if (VM_NAME == vm['name']) or (BACKUP_ALL):                            
                             #make sure VM is in a policy or we can't back it up. Also don't backup VMs in exclude policy
                             inpolicy=get_vm_info(manager_endpoint_connection,headers,proset['uuid'],vm['uuid'])
