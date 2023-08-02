@@ -3,10 +3,10 @@
 # 2022/07/07 Initial release
 # 2023/08/02 Updated to include COPYMODE
 # This script will run through all the VMs in a policy and perform a restore by cloning or overwriting the original VM.
-# The only variable that needs to be configured is RESTORE_MODE and optionally RESTORE_DS if restoring to alternate datastore
 
 HYCU_CTLR="10.10.10.10"
 USERNAME="user"
+# If PASSWD is left commented, user will be prompted for password
 #PASSWD="XXXXXXX"
 POLICY_NAME="Silver"
 
@@ -14,16 +14,15 @@ POLICY_NAME="Silver"
 DRYRUN="TRUE"
 
 # Restore from which copy?
-# COPYMODE can equal, AUTO, BACKUP, COPY or ARCHIVE
+# COPYMODE can equal, AUTO, BACKUP, COPY, or ARCHIVE
 # BACKUP = Primary backup
 # COPY = Secondary copy
 # ARCHIVE = GFS backup
 COPYMODE="BACKUP"
 
 # Set the variable RESTORE_MODE to either CLONE or OVERWRITE which determines how the VMs are restored
-# Uncomment RESTORE_DS if you want to restore to datastore other than the original location
+# Uncomment RESTORE_DS if you want to restore to a datastore other than the original location
 # If left commented, VM will be restored to original datastore
-# If PASSWD is left commented, user will be prompted for password
 RESTORE_MODE=CLONE
 #RESTORE_DS="VM_DS2"
 
