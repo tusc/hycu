@@ -77,13 +77,14 @@ do
 
         # Retrieve the most recent restore point
 
-        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, secondaryTargetName, hypervisorUuid, restorePointInMillis} "`
+        backup_info=`curl -s -X GET --insecure --header "Accept: application/json" --insecure --header "Authorization: Bearer $BTOKEN" "https://$HYCU_CTLR:8443/rest/v1.0/vms/$vm_uuid/backups?orderBy=-restorePointInMillis" | jq -r ".entities[0] | {uuid, type, primaryTargetName, secondaryTargetName, archiveTargetName, hypervisorUuid, restorePointInMillis} "`
 
         backup_uuid=`echo $backup_info | jq -r ".uuid"`
         host_uuid=`echo $backup_info | jq -r ".hypervisorUuid"`
         backup_type=`echo $backup_info | jq -r ".type"`
         backup_target=`echo $backup_info | jq -r ".primaryTargetName"`
         second_target=`echo $backup_info | jq -r ".secondaryTargetName"`
+        archive_target=`echo $backup_info | jq -r ".archiveTargetName"`
         backup_created=`echo $backup_info | jq -r ".restorePointInMillis" `
         # times are in EPOCH milliseconds, need to convert to seconds
         backup_time=`date -d @$((($backup_created + 500)/1000))`
@@ -96,6 +97,9 @@ do
                         ;;
                 COPY)
                         echo -e "Using $backup_type\t\tFROM $second_target\tusing restore point $backup_time"
+                        ;;
+                ARCHIVE)
+                        echo -e "Using $backup_type\t\tFROM $archive_target\tusing restore point $backup_time"
                         ;;
                 *)
                         echo "DEFAULT MODE"
