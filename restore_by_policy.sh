@@ -42,7 +42,7 @@ fi
 # request bearer TOKEN
 TOKEN=`curl -X POST -H "Accept: application/json" -sk -H "Authorization: Basic $(echo -n $USERNAME:$PASSWD | base64)" "https://$HYCU_CTLR:8443/rest/v1.0/requestToken" | jq -r '.token'`
 
-if [ ! -n "$TOKEN" ]; then
+if [ "$TOKEN" = "null" ]; then
         echo "Incorrect password!"
         exit 1
 fi
