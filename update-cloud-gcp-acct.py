@@ -127,7 +127,7 @@ def main(argv):
         print("Can't find cloud account " + account + "!")
         exit (1)
 
- #   if cloud_account:
+ #  Build the authentication text array and convert to json right away to avoid nested json errors later:
     auth_text = {'type': file_data['type'] , 'project_id': file_data['project_id'], 
         'private_key_id': file_data['private_key_id'], 'private_key': file_data['private_key'], 'client_email': file_data['client_email'], 
         'client_id': file_data['client_id'],'auth_uri': file_data['auth_uri'], 'token_uri': file_data['token_uri'], 
@@ -137,6 +137,7 @@ def main(argv):
 
     account_data=  { "type": "GCP", "name": account , "authenticationText": json.dumps(auth_text) }    
 
+    # check to make sure Google keys json data is valid
     response=validate_account(account_data, server, timeout=5)
 
     if response.status_code == 409:
@@ -149,7 +150,7 @@ def main(argv):
 
     print("Cloud account authencation is valid, updating")
 
-    #authentication text checks out, update cloud account
+    # Keys json file checks out, update cloud account
     update_cloud_account(account_data, server, account_uuid, timeout=5)    
     if response.status_code == 409:
         print("Cloud account authentication with private key " + file_data['private_key_id'] + " already exists!")
