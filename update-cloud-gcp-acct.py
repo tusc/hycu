@@ -97,7 +97,7 @@ def main(argv):
     myParser.add_argument("-p", "--password", help="HYCU Password", required=True)
     myParser.add_argument("-s", "--server", help="HYCU controller IP/DNS name", required=True)
     myParser.add_argument("-a", "--account", help="Cloud account name", required=True)    
-    myParser.add_argument("-f", "--filename", help="name of JSON file with list of controllers", required=True)    
+    myParser.add_argument("-f", "--filename", help="name of JSON file with GCP key info", required=True)    
 
     args = myParser.parse_args(argv)
     username=args.username
@@ -110,13 +110,13 @@ def main(argv):
         myParser.print_help()
         exit(1)
 
-    # Opening JSON file
+    # Open the JSON file
     f = open(filename)
     
     # returns JSON object as a dictionary
     file_data = json.load(f)
 
-    # find cloud account name
+    # find cloud account name within HYCU controller
     endpoint = "cloudAccounts?filter=name##" + account
     data=huRestEnt(server, endpoint, timeout=5, pagesize=50, returnRaw=False, maxitems=None)
 
@@ -127,40 +127,38 @@ def main(argv):
         print("Can't find cloud account " + account + "!")
         exit (1)
 
- #  Build the authentication text array and convert to json right away to avoid nested json errors later:
+    #  Build the authentication text array that will be sent to HYCU to update cloud account.
     auth_text = {'type': file_data['type'] , 'project_id': file_data['project_id'], 
         'private_key_id': file_data['private_key_id'], 'private_key': file_data['private_key'], 'client_email': file_data['client_email'], 
         'client_id': file_data['client_id'],'auth_uri': file_data['auth_uri'], 'token_uri': file_data['token_uri'], 
         'auth_provider_x509_cert_url': file_data['auth_provider_x509_cert_url'], 'client_x509_cert_url': file_data['client_x509_cert_url'],
         'universe_domain': file_data['universe_domain']                                         
         }
-
+    # Convert authentication text to JSON right away to avoid nested JSON errors later
     account_data=  { "type": "GCP", "name": account , "authenticationText": json.dumps(auth_text) }    
 
-    # check to make sure Google keys json data is valid
+    # check to make sure GCP keys JSON data is valid
     response=validate_account(account_data, server, timeout=5)
 
     if response.status_code == 409:
-        print("Cloud account authentication with private key " + file_data['private_key_id'] + " already exists!")
+        print("Cloud account " + account + " with private key id " + file_data['private_key_id'] + " already exists!")
         exit(1)
     if response.status_code not in [200,201,202]:
         print("Status:", response.status_code, "Failed to validate cloud account.\n\nDetailed API response:" )
         print(response.text)
         exit()
 
-    print("Cloud account authencation is valid, updating")
+    print("Cloud account " + account + " with private key id " + file_data['private_key_id'] + " is valid, updating")
 
-    # Keys json file checks out, update cloud account
+    # GCP Keys JSON file checks out, update cloud account in HYCU controller
     update_cloud_account(account_data, server, account_uuid, timeout=5)    
-    if response.status_code == 409:
-        print("Cloud account authentication with private key " + file_data['private_key_id'] + " already exists!")
-        exit(1)
+
     if response.status_code not in [200,201,202]:
         print("Status:", response.status_code, "Failed to update cloud account.\n\nDetailed API response:" )
         print(response.text)
         exit()
 
-    print("Cloud account updated succesfully") 
+    print("Cloud account " + account + " updated succesfully") 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
