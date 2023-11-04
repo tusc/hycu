@@ -151,7 +151,7 @@ def main(argv):
     print("Cloud account " + account + " with private key id " + file_data['private_key_id'] + " is valid, updating")
 
     # GCP Keys JSON file checks out, update cloud account in HYCU controller
-    update_cloud_account(account_data, server, account_uuid, timeout=5)    
+    response=update_cloud_account(account_data, server, account_uuid, timeout=5)    
 
     if response.status_code not in [200,201,202]:
         print("Status:", response.status_code, "Failed to update cloud account.\n\nDetailed API response:" )
