@@ -4,9 +4,10 @@
 # 
 # python3 clone-policy.py -u<username> -p<password> -s<controller IP/DNS> -o<origianl policy> -n<new policy> [-c<NUMERIC> optional flag to create multiple policies]
 #
+#
 # For example,
 # to create one new policy from original:
-# python3 clone-policy.py -uusername -p"MYPASSWORD" -shycuinst -o"Silver" -n"Silver Clone" [-c<NUMERIC> optional flag to create multiple policies]
+# python3 clone-policy.py -uusername -p"MYPASSWORD" -shycuinst -o"Silver" -n"Silver Clone"
 # 
 # to create 5 new polices from original:
 # python3 clone-policy.py -uusername -p"MYPASSWORD" -shycuinst -o"Silver" -n"Silver Clone" -c5
