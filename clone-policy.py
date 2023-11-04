@@ -111,15 +111,11 @@ def main(argv):
     if not data:
         print("Can't find cloud account " + origpolicy + "!")
         exit (1)
-        # retrieve cloud account UUID
-#       policy_uuid=data[0]['uuid'] 
-
 
     data[0]['name']=newpolicy
     # remove UUID from original policy
     del data[0]['uuid']
-    #json_data=json.dumps(data)
-
+  
     # create only one policy
     if not copies:
         response=create_policy(data[0], server, timeout=5)
