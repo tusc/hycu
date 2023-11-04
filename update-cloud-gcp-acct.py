@@ -156,7 +156,7 @@ def main(argv):
     if response.status_code not in [200,201,202]:
         print("Status:", response.status_code, "Failed to update cloud account.\n\nDetailed API response:" )
         print(response.text)
-        exit()
+        exit(1)
 
     print("Cloud account " + account + " updated succesfully") 
 
