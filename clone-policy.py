@@ -127,7 +127,7 @@ def main(argv):
     else:
     # create x number of policies
         for x in range(copies):
-            data[0]['name']=origpolicy + " " + str(x+1)
+            data[0]['name']=newpolicy + " " + str(x+1)
             print ("Creating policy " + data[0]['name'])
             response=create_policy(data[0], server, timeout=5)
             if response.status_code not in [200,201,202]:
