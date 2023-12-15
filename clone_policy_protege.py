@@ -5,6 +5,11 @@
 #
 # python3 ./clone_policy_protege.py  -u"username@gmail.com" -p"PASSW0RD" -a"accountid" -o<Original Policy> -n<New Policy> -s<Protection Set> -c[number of copies]
 #
+# username and password must by from a HYCU managed account and not from an identity provider.
+#
+# accountid can be obtained from the "Subscription Information" page from top right dropdown under your login name, followed by HYCU Account tab
+# under the field "HYCU Account ID".
+
 # 2023/12/15 Initial release
 
 import requests
