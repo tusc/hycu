@@ -228,7 +228,7 @@ def create_policy(dedicated_URL, token, protect_uuid, data):
     if response.status_code not in [200,201,202]:
         print(f"Request failed with status code: {response.status_code}")
         print(f"Policy: {data['name']}")        
-        print(f"Reason: {json_response['error']['reason']}")        
+        print(f"Reason: {json_response['error']['message']}")        
         exit(1)
 
     return response
